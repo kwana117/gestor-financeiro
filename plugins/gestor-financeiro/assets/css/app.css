@@ -142,13 +142,14 @@
 
 /* Buttons */
 .gf-button {
-  padding: 10px 20px;
+  padding: 1.3em 2em;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
   transition: background 0.2s ease;
+  line-height: 0;
 }
 
 .gf-button-primary {
@@ -576,4 +577,41 @@
     border-right: none;
     border-bottom: 1px solid #ddd;
   }
+}
+
+/* Danger Zone */
+.gf-danger-zone {
+  margin-top: 40px;
+  padding-top: 30px;
+  border-top: 2px solid #d63638;
+}
+
+.gf-danger-zone h3 {
+  color: #d63638;
+  margin-bottom: 15px;
+  font-size: 1.2em;
+}
+
+.gf-danger-zone p {
+  color: #666;
+  margin-bottom: 15px;
+  line-height: 1.6;
+}
+
+.gf-button-danger {
+  background: #d63638 !important;
+  color: #fff !important;
+  border-color: #d63638 !important;
+}
+
+.gf-button-danger:hover {
+  background: #a8282a !important;
+  border-color: #a8282a !important;
+}
+
+.gf-button-danger:disabled {
+  background: #999 !important;
+  border-color: #999 !important;
+  cursor: not-allowed;
+  opacity: 0.7;
 }

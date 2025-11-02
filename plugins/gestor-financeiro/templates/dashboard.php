@@ -200,6 +200,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<?php echo esc_html__( 'Guardar Definições', 'gestor-financeiro' ); ?>
 				</button>
 			</div>
+
+			<div class="gf-danger-zone">
+				<h3>
+					<?php echo esc_html__( 'Zona de Perigo', 'gestor-financeiro' ); ?>
+				</h3>
+				<p>
+					<?php echo esc_html__( 'Atenção: Esta ação irá apagar TODOS os dados da base de dados (estabelecimentos, fornecedores, funcionários, despesas, receitas, obrigações). Esta ação não pode ser desfeita.', 'gestor-financeiro' ); ?>
+				</p>
+				<button class="gf-button gf-button-danger" data-action="delete-all-data">
+					<?php echo esc_html__( 'Apagar Todos os Dados', 'gestor-financeiro' ); ?>
+				</button>
+			</div>
 		</div>
 
 		<!-- Tab: Ajuda -->

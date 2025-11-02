@@ -295,10 +295,22 @@
 
 		modal.style.display = 'flex';
 
-		// Close modal
-		modal.querySelector('.gf-modal-close')?.addEventListener('click', () => {
+		// Close modal on X click
+		const closeHandler = () => {
 			modal.style.display = 'none';
-		});
+			// Remove event listeners
+			document.removeEventListener('keydown', escHandler);
+			modal.querySelector('.gf-modal-close')?.removeEventListener('click', closeHandler);
+		};
+		modal.querySelector('.gf-modal-close')?.addEventListener('click', closeHandler);
+
+		// Close modal on ESC key
+		const escHandler = (e) => {
+			if (e.key === 'Escape' && modal.style.display === 'flex') {
+				closeHandler();
+			}
+		};
+		document.addEventListener('keydown', escHandler);
 
 		// Load data if editing
 		if (id) {
@@ -327,9 +339,22 @@
 
 		modal.style.display = 'flex';
 
-		modal.querySelector('.gf-modal-close')?.addEventListener('click', () => {
+		// Close modal on X click
+		const closeHandler = () => {
 			modal.style.display = 'none';
-		});
+			// Remove event listeners
+			document.removeEventListener('keydown', escHandler);
+			modal.querySelector('.gf-modal-close')?.removeEventListener('click', closeHandler);
+		};
+		modal.querySelector('.gf-modal-close')?.addEventListener('click', closeHandler);
+
+		// Close modal on ESC key
+		const escHandler = (e) => {
+			if (e.key === 'Escape' && modal.style.display === 'flex') {
+				closeHandler();
+			}
+		};
+		document.addEventListener('keydown', escHandler);
 
 		if (id) {
 			fetch(`${apiUrl}receitas/${id}`, {
@@ -717,6 +742,15 @@
 		content.querySelector('[data-action="save-settings"]')?.addEventListener('click', () => {
 			saveSettings(apiUrl, nonce);
 		});
+
+		// Delete all data button
+		content.querySelector('[data-action="delete-all-data"]')?.addEventListener('click', () => {
+			if (confirm('Tem a CERTEZA ABSOLUTA que deseja apagar TODOS os dados?\n\nEsta ação não pode ser desfeita!\n\nTodos os estabelecimentos, fornecedores, funcionários, despesas, receitas e obrigações serão permanentemente eliminados.')) {
+				if (confirm('Última confirmação: Esta ação é IRREVERSÍVEL. Deseja mesmo continuar?')) {
+					clearAllData(apiUrl, nonce);
+				}
+			}
+		});
 	}
 
 	function loadSettings(apiUrl, nonce) {
@@ -734,6 +768,38 @@
 			})
 			.catch(error => {
 				console.error('Error loading settings:', error);
+			});
+	}
+
+	function clearAllData(apiUrl, nonce) {
+		const button = document.querySelector('[data-action="delete-all-data"]');
+		if (!button) return;
+
+		button.disabled = true;
+		button.textContent = 'A apagar dados...';
+
+		fetch(`${apiUrl}admin/clear-all-data`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-WP-Nonce': nonce,
+			},
+		})
+			.then(response => {
+				if (!response.ok) {
+					return response.json().then(err => { throw new Error(err.message || 'Erro ao apagar dados'); });
+				}
+				return response.json();
+			})
+			.then(data => {
+				alert('Todos os dados foram apagados com sucesso!');
+				// Reload page to refresh data
+				location.reload();
+			})
+			.catch(error => {
+				alert('Erro ao apagar dados: ' + error.message);
+				button.disabled = false;
+				button.textContent = 'Apagar Todos os Dados';
 			});
 	}
 

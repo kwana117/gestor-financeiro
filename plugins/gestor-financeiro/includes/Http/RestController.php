@@ -66,6 +66,7 @@ class RestController
 		$this->register_csv_routes();
 		$this->register_apartment_routes();
 		$this->register_help_routes();
+		$this->register_admin_routes();
 	}
 
     /**
@@ -1735,6 +1736,90 @@ class RestController
         }
 
         return $this->success_response($result, 200);
+    }
+
+    /**
+     * Register admin utility routes.
+     *
+     * @return void
+     */
+    private function register_admin_routes(): void
+    {
+        register_rest_route(
+            self::NAMESPACE,
+            '/admin/clear-all-data',
+            array(
+                'methods'             => 'POST',
+                'callback'            => array($this, 'clear_all_data'),
+                'permission_callback' => array($this, 'check_edit_permission'),
+            )
+        );
+    }
+
+    // Admin endpoints.
+    public function clear_all_data(\WP_REST_Request $request): \WP_REST_Response
+    {
+        // Verify user has edit permission
+        if (!Permissions::can_edit()) {
+            return $this->error_response(
+                'insufficient_permissions',
+                __('Não tem permissão para realizar esta ação.', 'gestor-financeiro'),
+                403
+            );
+        }
+
+        global $wpdb;
+
+        try {
+            // Get all table names
+            $tables = new \GestorFinanceiro\DB\Tables();
+            
+            // Tables to clear (in order to respect foreign keys)
+            // Note: settings table is NOT cleared, only other data tables
+            $table_names = array(
+                'logs',              // No dependencies
+                'alertas',           // No dependencies
+                'despesas',          // Depends on estabelecimentos, fornecedores
+                'receitas',          // Depends on estabelecimentos
+                'recorrencias',      // Depends on various
+                'funcionarios',      // Depends on estabelecimentos
+                'obrigacoes',        // No dependencies
+                'fornecedores',      // No dependencies
+                'estabelecimentos',  // Base table
+                // 'settings' is NOT cleared - we want to keep settings
+            );
+
+            // Disable foreign key checks temporarily
+            $wpdb->query('SET FOREIGN_KEY_CHECKS = 0');
+
+            // Clear each table
+            foreach ($table_names as $table_key) {
+                $table_name = $tables->get_table_name($table_key);
+                $wpdb->query("TRUNCATE TABLE {$table_name}");
+            }
+
+            // Re-enable foreign key checks
+            $wpdb->query('SET FOREIGN_KEY_CHECKS = 1');
+
+            // Reset the seeded flag so demo data can be recreated
+            delete_option('gestor_financeiro_seeded');
+
+            return $this->success_response(
+                array(
+                    'message' => __('Todos os dados foram apagados com sucesso.', 'gestor-financeiro'),
+                ),
+                200
+            );
+        } catch (\Exception $e) {
+            // Re-enable foreign key checks in case of error
+            $wpdb->query('SET FOREIGN_KEY_CHECKS = 1');
+
+            return $this->error_response(
+                'clear_error',
+                __('Erro ao apagar dados: ', 'gestor-financeiro') . $e->getMessage(),
+                500
+            );
+        }
     }
 
     // Help endpoints.
