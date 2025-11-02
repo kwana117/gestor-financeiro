@@ -1,0 +1,31 @@
+# Ignore everything by default
+*
+
+# But allow these directories and files
+!.gitignore
+!.git/
+!plugins/
+!plugins/gestor-financeiro/
+!plugins/gestor-financeiro/**
+!mu-plugins/
+!mu-plugins/gestor-financeiro-bootstrap.php
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignore WordPress uploads and cache
+uploads/
+cache/
+upgrade/
+backup-db/
+backups/
+debug.log
+

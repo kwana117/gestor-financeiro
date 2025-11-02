@@ -1,0 +1,19 @@
+{
+	"name": "gestor-financeiro/gestor-financeiro",
+	"description": "Sistema de gestão financeira para uma empresa com múltiplos estabelecimentos",
+	"type": "wordpress-plugin",
+	"license": "GPL-2.0-or-later",
+	"require": {
+		"php": ">=8.0"
+	},
+	"autoload": {
+		"psr-4": {
+			"GestorFinanceiro\\": "includes/"
+		}
+	},
+	"config": {
+		"optimize-autoloader": true,
+		"sort-packages": true
+	}
+}
+
