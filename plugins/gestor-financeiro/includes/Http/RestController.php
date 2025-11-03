@@ -521,6 +521,16 @@ class RestController
                 'permission_callback' => array($this, 'check_edit_permission'),
             )
         );
+
+        register_rest_route(
+            self::NAMESPACE,
+            '/csv/template',
+            array(
+                'methods'             => 'GET',
+                'callback'            => array($this, 'get_csv_template'),
+                'permission_callback' => array($this, 'check_view_permission'),
+            )
+        );
     }
 
     /**
@@ -1666,6 +1676,33 @@ class RestController
         $result = $csv_handler->execute_import($preview_data, $type);
 
         return $this->success_response($result, 200);
+    }
+
+    public function get_csv_template(\WP_REST_Request $request): \WP_REST_Response
+    {
+        $type = sanitize_text_field($request->get_param('type') ?: 'despesas');
+
+        if (!in_array($type, array('despesas', 'receitas'), true)) {
+            return $this->error_response(
+                'invalid_type',
+                __('Tipo inválido. Use "despesas" ou "receitas".', 'gestor-financeiro'),
+                400
+            );
+        }
+
+        $csv_handler = new CSV();
+        $csv_content = $csv_handler->get_template($type);
+
+        // Return CSV as download via REST response with custom headers.
+        // Use UTF-8 encoding without BOM for better compatibility
+        $response = new \WP_REST_Response($csv_content, 200);
+        $response->header('Content-Type', 'text/csv; charset=UTF-8');
+        $response->header('Content-Encoding', 'UTF-8');
+        $filename = sprintf('modelo-%s.csv', $type);
+        $response->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        $response->header('Content-Length', (string) strlen($csv_content));
+
+        return $response;
     }
 
     // Apartment endpoints.

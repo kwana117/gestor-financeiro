@@ -41,6 +41,15 @@
 		// Initialize salaries tab
 		initSalariesTab(apiUrl, nonce);
 
+		// Initialize establishments tab
+		initEstabelecimentosTab(apiUrl, nonce);
+
+		// Initialize suppliers tab
+		initFornecedoresTab(apiUrl, nonce);
+
+		// Initialize employees tab
+		initFuncionariosTab(apiUrl, nonce);
+
 		// Initialize reports tab
 		initReportsTab(apiUrl, nonce);
 
@@ -200,6 +209,83 @@
 			openReceitaModal(apiUrl, nonce);
 		});
 
+		// Initialize CSV handlers once (hidden by default)
+		initCSVImportHandlers(apiUrl, nonce, content);
+
+		// Toggle CSV import section
+		content.querySelector('[data-action="toggle-csv-import"]')?.addEventListener('click', () => {
+			const importSection = content.querySelector('#gf-csv-import-section');
+			if (importSection) {
+				const isVisible = importSection.style.display !== 'none';
+				importSection.style.display = isVisible ? 'none' : 'block';
+			}
+		});
+	}
+
+	function initCSVImportHandlers(apiUrl, nonce, content) {
+		// Only initialize once per page load
+		if (content.dataset.csvHandlersInitialized) {
+			return;
+		}
+		content.dataset.csvHandlersInitialized = 'true';
+
+		// CSV Template download - prevent multiple downloads
+		const despesasLink = content.querySelector('#gf-download-csv-template');
+		if (despesasLink) {
+			despesasLink.addEventListener('click', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				if (!despesasLink.dataset.downloading) {
+					despesasLink.dataset.downloading = 'true';
+					downloadCSVTemplate(apiUrl, nonce, 'despesas').finally(() => {
+						setTimeout(() => {
+							despesasLink.dataset.downloading = '';
+						}, 500);
+					});
+				}
+			});
+		}
+
+		const receitasLink = content.querySelector('#gf-download-csv-template-receitas');
+		if (receitasLink) {
+			receitasLink.addEventListener('click', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				if (!receitasLink.dataset.downloading) {
+					receitasLink.dataset.downloading = 'true';
+					downloadCSVTemplate(apiUrl, nonce, 'receitas').finally(() => {
+						setTimeout(() => {
+							receitasLink.dataset.downloading = '';
+						}, 500);
+					});
+				}
+			});
+		}
+
+		// CSV Import handlers
+		content.querySelector('[data-action="preview-csv-import"]')?.addEventListener('click', () => {
+			previewCSVImport(apiUrl, nonce);
+		});
+
+		content.querySelector('[data-action="execute-csv-import"]')?.addEventListener('click', () => {
+			executeCSVImport(apiUrl, nonce);
+		});
+
+		// File upload handler
+		const fileInput = content.querySelector('#gf-csv-import-file');
+		if (fileInput) {
+			fileInput.addEventListener('change', (e) => {
+				const file = e.target.files[0];
+				if (file) {
+					const reader = new FileReader();
+					reader.onload = (event) => {
+						document.querySelector('#gf-csv-import-content').value = event.target.result;
+					};
+					reader.readAsText(file, 'UTF-8');
+				}
+			});
+		}
+
 		// Filter listeners
 		content.querySelector('#gf-filter-estabelecimento')?.addEventListener('change', () => {
 			loadMovements(apiUrl, nonce);
@@ -248,10 +334,99 @@
 						select.appendChild(option);
 					});
 				}
+				
+				// Also populate all establishment selects in forms
+				document.querySelectorAll('[name="estabelecimento_id"]').forEach(sel => {
+					if (sel !== select) {
+						populateEstabelecimentoSelect(sel, data);
+					}
+				});
 			})
 			.catch(error => {
 				console.error('Error loading establishments:', error);
 			});
+	}
+
+	function populateEstabelecimentoSelect(select, establishmentsData = null) {
+		if (!select) return;
+		
+		// Clear existing options except the first one
+		while (select.children.length > 1) {
+			select.removeChild(select.lastChild);
+		}
+		
+		// If data is provided, use it; otherwise fetch
+		if (establishmentsData && Array.isArray(establishmentsData)) {
+			establishmentsData.forEach(est => {
+				const option = document.createElement('option');
+				option.value = est.id;
+				option.textContent = est.nome;
+				select.appendChild(option);
+			});
+		} else {
+			// Fetch data
+			const apiUrl = window.gestorFinanceiro?.apiUrl || '/wp-json/gestor-financeiro/v1/';
+			const nonce = document.querySelector('.gf-app')?.dataset.nonce || '';
+			
+			fetch(`${apiUrl}estabelecimentos`, {
+				headers: { 'X-WP-Nonce': nonce },
+			})
+				.then(r => r.json())
+				.then(data => {
+					if (Array.isArray(data)) {
+						data.forEach(est => {
+							const option = document.createElement('option');
+							option.value = est.id;
+							option.textContent = est.nome;
+							select.appendChild(option);
+						});
+					}
+				})
+				.catch(error => {
+					console.error('Error populating establishment select:', error);
+				});
+		}
+	}
+
+	function populateFornecedorSelect(select, fornecedoresData = null) {
+		if (!select) return;
+		
+		// Clear existing options except the first one
+		while (select.children.length > 1) {
+			select.removeChild(select.lastChild);
+		}
+		
+		// If data is provided, use it; otherwise fetch
+		if (fornecedoresData && Array.isArray(fornecedoresData)) {
+			fornecedoresData.forEach(forn => {
+				const option = document.createElement('option');
+				option.value = forn.id;
+				option.textContent = forn.nome;
+				select.appendChild(option);
+			});
+		} else {
+			// Fetch data
+			const apiUrl = window.gestorFinanceiro?.apiUrl || '/wp-json/gestor-financeiro/v1/';
+			const nonce = document.querySelector('.gf-app')?.dataset.nonce || '';
+			
+			fetch(`${apiUrl}fornecedores`, {
+				headers: { 'X-WP-Nonce': nonce },
+			})
+				.then(r => r.json())
+				.then(data => {
+					if (Array.isArray(data)) {
+						data.forEach(forn => {
+							const option = document.createElement('option');
+							option.value = forn.id;
+							option.textContent = forn.nome;
+							select.appendChild(option);
+						});
+					}
+				})
+				.catch(error => {
+					console.error('Error populating supplier select:', error);
+				});
+		}
 	}
 
 	function loadMovements(apiUrl, nonce) {
@@ -392,6 +567,11 @@
 				});
 		} else {
 			form.innerHTML = getDespesaFormHTML();
+			// Populate selects when creating new
+			setTimeout(() => {
+				populateEstabelecimentoSelect(form.querySelector('[name="estabelecimento_id"]'));
+				populateFornecedorSelect(form.querySelector('[name="fornecedor_id"]'));
+			}, 100);
 		}
 
 		// Submit form
@@ -435,6 +615,10 @@
 				});
 		} else {
 			form.innerHTML = getReceitaFormHTML();
+			// Populate selects when creating new
+			setTimeout(() => {
+				populateEstabelecimentoSelect(form.querySelector('[name="estabelecimento_id"]'));
+			}, 100);
 		}
 
 		form.onsubmit = (e) => {
@@ -509,15 +693,25 @@
 
 	function populateDespesaForm(form, data) {
 		form.innerHTML = getDespesaFormHTML();
+		
+		// Load establishments and suppliers
+		populateEstabelecimentoSelect(form.querySelector('[name="estabelecimento_id"]'));
+		populateFornecedorSelect(form.querySelector('[name="fornecedor_id"]'));
+		
 		if (data.data) form.querySelector('[name="data"]').value = data.data;
 		if (data.descricao) form.querySelector('[name="descricao"]').value = data.descricao;
 		if (data.valor) form.querySelector('[name="valor"]').value = data.valor;
 		if (data.vencimento) form.querySelector('[name="vencimento"]').value = data.vencimento;
 		if (data.estabelecimento_id) form.querySelector('[name="estabelecimento_id"]').value = data.estabelecimento_id;
+		if (data.fornecedor_id) form.querySelector('[name="fornecedor_id"]').value = data.fornecedor_id;
 	}
 
 	function populateReceitaForm(form, data) {
 		form.innerHTML = getReceitaFormHTML();
+		
+		// Load establishments
+		populateEstabelecimentoSelect(form.querySelector('[name="estabelecimento_id"]'));
+		
 		if (data.data) form.querySelector('[name="data"]').value = data.data;
 		if (data.canal) form.querySelector('[name="canal"]').value = data.canal;
 		if (data.bruto) form.querySelector('[name="bruto"]').value = data.bruto;
@@ -796,8 +990,265 @@
 	}
 
 	function exportCSV(apiUrl, nonce) {
-		// CSV export will be implemented in Phase 9
-		alert('Exportação CSV será implementada na Phase 9.');
+		const type = prompt('Selecione o tipo:\n1 - Despesas\n2 - Receitas', '1');
+		if (!type) return;
+
+		const csvType = type === '1' ? 'despesas' : 'receitas';
+		const startDate = prompt('Data início (YYYY-MM-DD) ou deixe vazio para últimos 3 meses:', '');
+		const endDate = prompt('Data fim (YYYY-MM-DD) ou deixe vazio para hoje:', '');
+
+		const params = new URLSearchParams();
+		params.append('type', csvType);
+		if (startDate) params.append('start_date', startDate);
+		if (endDate) params.append('end_date', endDate);
+
+		// Use fetch with nonce to download CSV
+		fetch(`${apiUrl}csv/export?${params}`, {
+			headers: { 'X-WP-Nonce': nonce },
+		})
+			.then(response => {
+				if (!response.ok) {
+					throw new Error('Erro ao exportar CSV');
+				}
+				return response.blob();
+			})
+			.then(blob => {
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				const today = new Date().toISOString().split('T')[0];
+				a.download = `export-${csvType}-${today}.csv`;
+				document.body.appendChild(a);
+				a.click();
+				window.URL.revokeObjectURL(url);
+				document.body.removeChild(a);
+			})
+			.catch(error => {
+				alert('Erro ao exportar CSV: ' + error.message);
+			});
+	}
+
+	let csvPreviewData = null;
+
+	function downloadCSVTemplate(apiUrl, nonce, type) {
+		return fetch(`${apiUrl}csv/template?type=${type}`, {
+			headers: { 'X-WP-Nonce': nonce },
+		})
+			.then(response => {
+				if (!response.ok) {
+					throw new Error('Erro ao descarregar modelo');
+				}
+				return response.text();
+			})
+			.then(csvContent => {
+				// Remove BOM if present (UTF-8 BOM is \xEF\xBB\xBF)
+				let content = csvContent;
+				// Check for UTF-8 BOM at the beginning
+				if (content.length > 0 && content.charCodeAt(0) === 0xFEFF) {
+					content = content.substring(1);
+				}
+				// Also check for BOM bytes directly
+				if (content.length >= 3 && content.charCodeAt(0) === 0xEF && content.charCodeAt(1) === 0xBB && content.charCodeAt(2) === 0xBF) {
+					content = content.substring(3);
+				}
+				
+				// Create blob with proper CSV MIME type
+				// Use 'text/csv' without charset for better compatibility with Numbers/Excel
+				const blob = new Blob([content], { type: 'text/csv' });
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = `modelo-${type}.csv`;
+				a.style.display = 'none';
+				document.body.appendChild(a);
+				a.click();
+				// Clean up after a short delay to ensure download starts
+				setTimeout(() => {
+					window.URL.revokeObjectURL(url);
+					document.body.removeChild(a);
+				}, 100);
+			})
+			.catch(error => {
+				alert('Erro ao descarregar modelo: ' + error.message);
+				throw error;
+			});
+	}
+
+	function previewCSVImport(apiUrl, nonce) {
+		const type = document.querySelector('#gf-csv-import-type')?.value || 'despesas';
+		const content = document.querySelector('#gf-csv-import-content')?.value;
+
+		if (!content || content.trim() === '') {
+			alert('Por favor, cole ou faça upload do conteúdo CSV.');
+			return;
+		}
+
+		const previewDiv = document.querySelector('#gf-csv-import-preview');
+		const previewContent = document.querySelector('#gf-csv-import-preview-content');
+		const errorsDiv = document.querySelector('#gf-csv-import-errors');
+		const executeBtn = document.querySelector('[data-action="execute-csv-import"]');
+
+		previewDiv.style.display = 'block';
+		previewContent.innerHTML = '<div class="gf-loading">A validar CSV...</div>';
+		errorsDiv.innerHTML = '';
+		executeBtn.style.display = 'none';
+
+		fetch(`${apiUrl}csv/import`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-WP-Nonce': nonce,
+			},
+			body: JSON.stringify({
+				type: type,
+				csv_content: content,
+			}),
+		})
+			.then(r => r.json())
+			.then(result => {
+				if (result.code) {
+					previewContent.innerHTML = `<div class="gf-error">Erro: ${result.message}</div>`;
+					return;
+				}
+
+				csvPreviewData = result.preview || [];
+
+				if (!result.success) {
+					previewContent.innerHTML = `<div class="gf-error">${result.error || 'Erro ao processar CSV'}</div>`;
+					return;
+				}
+
+				// Show preview
+				if (csvPreviewData.length === 0) {
+					previewContent.innerHTML = '<p>Nenhum dado válido encontrado no CSV.</p>';
+					return;
+				}
+
+				let html = `<p><strong>${csvPreviewData.length} registo(s) válido(s) encontrado(s)</strong></p>`;
+				html += '<div style="max-height: 400px; overflow-y: auto; margin-top: 15px;">';
+				html += '<table class="gf-table" style="width: 100%;">';
+				html += '<thead><tr>';
+
+				// Headers
+				if (type === 'despesas') {
+					html += '<th>Data</th><th>Estabelecimento</th><th>Descrição</th><th>Valor</th><th>Vencimento</th>';
+				} else {
+					html += '<th>Data</th><th>Estabelecimento</th><th>Bruto</th><th>Taxas</th><th>Líquido</th>';
+				}
+				html += '</tr></thead><tbody>';
+
+				// Preview rows (limit to 10)
+				csvPreviewData.slice(0, 10).forEach(row => {
+					html += '<tr>';
+					if (type === 'despesas') {
+						html += `<td>${row.data || ''}</td>`;
+						html += `<td>${row.estabelecimento_id || ''}</td>`;
+						html += `<td>${row.descricao || ''}</td>`;
+						html += `<td>${formatCurrency(row.valor || 0)}</td>`;
+						html += `<td>${row.vencimento || ''}</td>`;
+					} else {
+						html += `<td>${row.data || ''}</td>`;
+						html += `<td>${row.estabelecimento_id || ''}</td>`;
+						html += `<td>${formatCurrency(row.bruto || 0)}</td>`;
+						html += `<td>${formatCurrency(row.taxas || 0)}</td>`;
+						html += `<td>${formatCurrency(row.liquido || 0)}</td>`;
+					}
+					html += '</tr>';
+				});
+
+				html += '</tbody></table></div>';
+
+				if (csvPreviewData.length > 10) {
+					html += `<p style="margin-top: 10px; color: var(--gf-text-secondary);">Mostrando primeiros 10 de ${csvPreviewData.length} registos</p>`;
+				}
+
+				previewContent.innerHTML = html;
+
+				// Show errors if any
+				if (result.errors && Object.keys(result.errors).length > 0) {
+					let errorsHtml = '<div class="gf-error" style="padding: 15px; margin-top: 15px;">';
+					errorsHtml += '<strong>Erros encontrados:</strong><ul style="margin-top: 10px;">';
+					Object.entries(result.errors).forEach(([line, lineErrors]) => {
+						if (Array.isArray(lineErrors)) {
+							lineErrors.forEach(error => {
+								errorsHtml += `<li>Linha ${line}: ${error}</li>`;
+							});
+						}
+					});
+					errorsHtml += '</ul></div>';
+					errorsDiv.innerHTML = errorsHtml;
+				} else {
+					errorsDiv.innerHTML = '';
+				}
+
+				// Show execute button if preview is valid
+				if (csvPreviewData.length > 0) {
+					executeBtn.style.display = 'inline-block';
+				}
+			})
+			.catch(error => {
+				previewContent.innerHTML = `<div class="gf-error">Erro ao processar CSV: ${error.message}</div>`;
+			});
+	}
+
+	function executeCSVImport(apiUrl, nonce) {
+		if (!csvPreviewData || csvPreviewData.length === 0) {
+			alert('Não há dados para importar. Por favor, faça preview primeiro.');
+			return;
+		}
+
+		if (!confirm(`Tem a certeza que deseja importar ${csvPreviewData.length} registo(s)?`)) {
+			return;
+		}
+
+		const type = document.querySelector('#gf-csv-import-type')?.value || 'despesas';
+		const executeBtn = document.querySelector('[data-action="execute-csv-import"]');
+
+		executeBtn.disabled = true;
+		executeBtn.textContent = 'A importar...';
+
+		fetch(`${apiUrl}csv/import/execute`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-WP-Nonce': nonce,
+			},
+			body: JSON.stringify({
+				type: type,
+				preview_data: csvPreviewData,
+			}),
+		})
+			.then(r => r.json())
+			.then(result => {
+				executeBtn.disabled = false;
+				executeBtn.textContent = 'Executar Importação';
+
+				if (result.code) {
+					alert('Erro: ' + result.message);
+					return;
+				}
+
+				if (result.success) {
+					alert(`Importação concluída! ${result.imported || 0} registo(s) importado(s) com sucesso.`);
+					
+					// Clear form
+					document.querySelector('#gf-csv-import-content').value = '';
+					document.querySelector('#gf-csv-import-file').value = '';
+					document.querySelector('#gf-csv-import-preview').style.display = 'none';
+					csvPreviewData = null;
+
+					// Reload data
+					loadMovements(apiUrl, nonce);
+					loadSummary(apiUrl, nonce);
+				} else {
+					alert('Erro na importação. Verifique os dados e tente novamente.');
+				}
+			})
+			.catch(error => {
+				executeBtn.disabled = false;
+				executeBtn.textContent = 'Executar Importação';
+				alert('Erro: ' + error.message);
+			});
 	}
 
 	function initSettingsTab(apiUrl, nonce) {
@@ -916,6 +1367,740 @@
 	function updateElement(selector, content) {
 		const el = document.querySelector(selector);
 		if (el) el.textContent = content;
+	}
+
+	function initEstabelecimentosTab(apiUrl, nonce) {
+		const content = document.querySelector('[data-tab-content="estabelecimentos"]');
+		if (!content) return;
+
+		// Load establishments
+		loadEstabelecimentos(apiUrl, nonce);
+
+		// Add button
+		content.querySelector('[data-action="add-estabelecimento"]')?.addEventListener('click', () => {
+			openEstabelecimentoModal(apiUrl, nonce);
+		});
+	}
+
+	function loadEstabelecimentos(apiUrl, nonce) {
+		const list = document.querySelector('.gf-estabelecimentos-list');
+		if (!list) return;
+
+		list.innerHTML = '<div class="gf-loading">A carregar...</div>';
+
+		fetch(`${apiUrl}estabelecimentos`, {
+			headers: { 'X-WP-Nonce': nonce },
+		})
+			.then(r => {
+				if (!r.ok) {
+					throw new Error(`HTTP error! status: ${r.status}`);
+				}
+				return r.json();
+			})
+			.then(data => {
+				if (!Array.isArray(data)) {
+					console.error('Estabelecimentos response is not an array:', data);
+					list.innerHTML = '<div class="gf-error">Erro ao carregar estabelecimentos.</div>';
+					return;
+				}
+
+				if (data.length === 0) {
+					list.innerHTML = '<p>Nenhum estabelecimento encontrado. Clique em "Adicionar Estabelecimento" para criar um.</p>';
+					return;
+				}
+
+				list.innerHTML = data.map(est => `
+					<div class="gf-movimento-item">
+						<div>
+							<strong>${est.nome}</strong> - ${est.tipo}
+							${est.ativo ? '<span style="color: #00a32a; margin-left: 10px;">● Ativo</span>' : '<span style="color: #d63638; margin-left: 10px;">● Inativo</span>'}
+							${est.dia_renda ? `<span style="margin-left: 10px;">Dia de renda: ${est.dia_renda}</span>` : ''}
+						</div>
+						<div>
+							<button class="gf-button" data-action="edit-estabelecimento" data-id="${est.id}">Editar</button>
+							<button class="gf-button" data-action="delete-estabelecimento" data-id="${est.id}">Eliminar</button>
+						</div>
+					</div>
+				`).join('');
+
+				// Add event listeners
+				list.querySelectorAll('[data-action="edit-estabelecimento"]').forEach(btn => {
+					btn.addEventListener('click', () => {
+						openEstabelecimentoModal(apiUrl, nonce, btn.dataset.id);
+					});
+				});
+
+				list.querySelectorAll('[data-action="delete-estabelecimento"]').forEach(btn => {
+					btn.addEventListener('click', () => {
+						if (confirm('Tem a certeza que deseja eliminar este estabelecimento? Esta ação não pode ser desfeita e eliminará todas as despesas, receitas e funcionários associados.')) {
+							deleteEstabelecimento(apiUrl, nonce, btn.dataset.id);
+						}
+					});
+				});
+			})
+			.catch(error => {
+				list.innerHTML = `<div class="gf-error">Erro ao carregar estabelecimentos: ${error.message}</div>`;
+			});
+	}
+
+	function openEstabelecimentoModal(apiUrl, nonce, id = null) {
+		const modal = document.getElementById('gf-modal-estabelecimento');
+		const form = document.getElementById('gf-form-estabelecimento');
+		if (!modal || !form) return;
+
+		modal.style.display = 'flex';
+
+		// Close modal on X click
+		const closeHandler = () => {
+			modal.style.display = 'none';
+			document.removeEventListener('keydown', escHandler);
+			modal.querySelector('.gf-modal-close')?.removeEventListener('click', closeHandler);
+		};
+		modal.querySelector('.gf-modal-close')?.addEventListener('click', closeHandler);
+
+		// Close modal on ESC key
+		const escHandler = (e) => {
+			if (e.key === 'Escape' && modal.style.display === 'flex') {
+				closeHandler();
+			}
+		};
+		document.addEventListener('keydown', escHandler);
+
+		// Load data if editing
+		if (id) {
+			fetch(`${apiUrl}estabelecimentos/${id}`, {
+				headers: { 'X-WP-Nonce': nonce },
+			})
+				.then(r => r.json())
+				.then(data => {
+					populateEstabelecimentoForm(form, data);
+				});
+		} else {
+			form.innerHTML = getEstabelecimentoFormHTML();
+		}
+
+		// Submit form
+		form.onsubmit = (e) => {
+			e.preventDefault();
+			saveEstabelecimento(apiUrl, nonce, id, form);
+		};
+	}
+
+	function getEstabelecimentoFormHTML() {
+		return `
+			<div class="gf-form-group">
+				<label>Nome</label>
+				<input type="text" name="nome" class="gf-input" required>
+			</div>
+			<div class="gf-form-group">
+				<label>Tipo</label>
+				<select name="tipo" class="gf-input" required>
+					<option value="restaurante">Restaurante</option>
+					<option value="bar">Bar</option>
+					<option value="apartamento">Apartamento</option>
+				</select>
+			</div>
+			<div class="gf-form-group">
+				<label>Dia de Renda (opcional, apenas para apartamentos)</label>
+				<input type="number" name="dia_renda" class="gf-input" min="1" max="31">
+			</div>
+			<div class="gf-form-group">
+				<label>
+					<input type="checkbox" name="ativo" value="1" checked> Ativo
+				</label>
+			</div>
+			<div class="gf-form-group">
+				<button type="submit" class="gf-button gf-button-primary">Guardar</button>
+			</div>
+		`;
+	}
+
+	function populateEstabelecimentoForm(form, data) {
+		form.innerHTML = getEstabelecimentoFormHTML();
+		if (data.nome) form.querySelector('[name="nome"]').value = data.nome;
+		if (data.tipo) form.querySelector('[name="tipo"]').value = data.tipo;
+		if (data.dia_renda) form.querySelector('[name="dia_renda"]').value = data.dia_renda;
+		if (data.ativo) form.querySelector('[name="ativo"]').checked = data.ativo == 1;
+	}
+
+	function saveEstabelecimento(apiUrl, nonce, id, form) {
+		const formData = new FormData(form);
+		const data = {
+			nome: formData.get('nome'),
+			tipo: formData.get('tipo'),
+			dia_renda: formData.get('dia_renda') ? parseInt(formData.get('dia_renda')) : null,
+			ativo: formData.get('ativo') ? 1 : 0,
+		};
+
+		const method = id ? 'PUT' : 'POST';
+		const url = id ? `${apiUrl}estabelecimentos/${id}` : `${apiUrl}estabelecimentos`;
+
+		fetch(url, {
+			method: method,
+			headers: {
+				'Content-Type': 'application/json',
+				'X-WP-Nonce': nonce,
+			},
+			body: JSON.stringify(data),
+		})
+			.then(response => response.json())
+			.then(result => {
+				if (result.code) {
+					alert('Erro: ' + result.message);
+				} else {
+					document.getElementById('gf-modal-estabelecimento').style.display = 'none';
+					loadEstabelecimentos(apiUrl, nonce);
+					// Reload establishments in filters and forms
+					loadEstablishments(apiUrl, nonce);
+				}
+			})
+			.catch(error => {
+				alert('Erro ao guardar: ' + error.message);
+			});
+	}
+
+	function deleteEstabelecimento(apiUrl, nonce, id) {
+		fetch(`${apiUrl}estabelecimentos/${id}`, {
+			method: 'DELETE',
+			headers: { 'X-WP-Nonce': nonce },
+		})
+			.then(response => {
+				if (response.ok || response.status === 204) {
+					loadEstabelecimentos(apiUrl, nonce);
+					loadEstablishments(apiUrl, nonce);
+					loadSummary(apiUrl, nonce);
+				} else {
+					return response.json().then(err => {
+						throw new Error(err.message || 'Erro ao eliminar');
+					});
+				}
+			})
+			.catch(error => {
+				alert('Erro: ' + error.message);
+			});
+	}
+
+	function initFornecedoresTab(apiUrl, nonce) {
+		const content = document.querySelector('[data-tab-content="fornecedores"]');
+		if (!content) return;
+
+		// Load suppliers
+		loadFornecedores(apiUrl, nonce);
+
+		// Add button
+		content.querySelector('[data-action="add-fornecedor"]')?.addEventListener('click', () => {
+			openFornecedorModal(apiUrl, nonce);
+		});
+	}
+
+	function loadFornecedores(apiUrl, nonce) {
+		const list = document.querySelector('.gf-fornecedores-list');
+		if (!list) return;
+
+		list.innerHTML = '<div class="gf-loading">A carregar...</div>';
+
+		fetch(`${apiUrl}fornecedores`, {
+			headers: { 'X-WP-Nonce': nonce },
+		})
+			.then(r => {
+				if (!r.ok) {
+					throw new Error(`HTTP error! status: ${r.status}`);
+				}
+				return r.json();
+			})
+			.then(data => {
+				if (!Array.isArray(data)) {
+					console.error('Fornecedores response is not an array:', data);
+					list.innerHTML = '<div class="gf-error">Erro ao carregar fornecedores.</div>';
+					return;
+				}
+
+				if (data.length === 0) {
+					list.innerHTML = '<p>Nenhum fornecedor encontrado. Clique em "Adicionar Fornecedor" para criar um.</p>';
+					return;
+				}
+
+				list.innerHTML = data.map(forn => `
+					<div class="gf-movimento-item">
+						<div>
+							<strong>${forn.nome}</strong>
+							${forn.categoria ? `<span style="margin-left: 10px;">${forn.categoria}</span>` : ''}
+							${forn.nif ? `<span style="margin-left: 10px;">NIF: ${forn.nif}</span>` : ''}
+						</div>
+						<div>
+							<button class="gf-button" data-action="edit-fornecedor" data-id="${forn.id}">Editar</button>
+							<button class="gf-button" data-action="delete-fornecedor" data-id="${forn.id}">Eliminar</button>
+						</div>
+					</div>
+				`).join('');
+
+				// Add event listeners
+				list.querySelectorAll('[data-action="edit-fornecedor"]').forEach(btn => {
+					btn.addEventListener('click', () => {
+						openFornecedorModal(apiUrl, nonce, btn.dataset.id);
+					});
+				});
+
+				list.querySelectorAll('[data-action="delete-fornecedor"]').forEach(btn => {
+					btn.addEventListener('click', () => {
+						if (confirm('Tem a certeza que deseja eliminar este fornecedor?')) {
+							deleteFornecedor(apiUrl, nonce, btn.dataset.id);
+						}
+					});
+				});
+			})
+			.catch(error => {
+				list.innerHTML = `<div class="gf-error">Erro ao carregar fornecedores: ${error.message}</div>`;
+			});
+	}
+
+	function openFornecedorModal(apiUrl, nonce, id = null) {
+		const modal = document.getElementById('gf-modal-fornecedor');
+		const form = document.getElementById('gf-form-fornecedor');
+		if (!modal || !form) return;
+
+		modal.style.display = 'flex';
+
+		// Close modal on X click
+		const closeHandler = () => {
+			modal.style.display = 'none';
+			document.removeEventListener('keydown', escHandler);
+			modal.querySelector('.gf-modal-close')?.removeEventListener('click', closeHandler);
+		};
+		modal.querySelector('.gf-modal-close')?.addEventListener('click', closeHandler);
+
+		// Close modal on ESC key
+		const escHandler = (e) => {
+			if (e.key === 'Escape' && modal.style.display === 'flex') {
+				closeHandler();
+			}
+		};
+		document.addEventListener('keydown', escHandler);
+
+		// Load data if editing
+		if (id) {
+			fetch(`${apiUrl}fornecedores/${id}`, {
+				headers: { 'X-WP-Nonce': nonce },
+			})
+				.then(r => r.json())
+				.then(data => {
+					populateFornecedorForm(form, data);
+				});
+		} else {
+			form.innerHTML = getFornecedorFormHTML();
+		}
+
+		// Submit form
+		form.onsubmit = (e) => {
+			e.preventDefault();
+			saveFornecedor(apiUrl, nonce, id, form);
+		};
+	}
+
+	function getFornecedorFormHTML() {
+		return `
+			<div class="gf-form-group">
+				<label>Nome</label>
+				<input type="text" name="nome" class="gf-input" required>
+			</div>
+			<div class="gf-form-group">
+				<label>Categoria</label>
+				<input type="text" name="categoria" class="gf-input" placeholder="ex: Alimentação, Bebidas, Serviços">
+			</div>
+			<div class="gf-form-group">
+				<label>NIF</label>
+				<input type="text" name="nif" class="gf-input">
+			</div>
+			<div class="gf-form-group">
+				<label>Contacto</label>
+				<input type="text" name="contacto" class="gf-input" placeholder="Email ou telefone">
+			</div>
+			<div class="gf-form-group">
+				<label>IBAN</label>
+				<input type="text" name="iban" class="gf-input">
+			</div>
+			<div class="gf-form-group">
+				<label>Prazo de Pagamento (dias)</label>
+				<input type="number" name="prazo_pagamento" class="gf-input" min="0">
+			</div>
+			<div class="gf-form-group">
+				<label>Notas</label>
+				<textarea name="notas" class="gf-input" rows="3"></textarea>
+			</div>
+			<div class="gf-form-group">
+				<button type="submit" class="gf-button gf-button-primary">Guardar</button>
+			</div>
+		`;
+	}
+
+	function populateFornecedorForm(form, data) {
+		form.innerHTML = getFornecedorFormHTML();
+		if (data.nome) form.querySelector('[name="nome"]').value = data.nome;
+		if (data.categoria) form.querySelector('[name="categoria"]').value = data.categoria;
+		if (data.nif) form.querySelector('[name="nif"]').value = data.nif;
+		if (data.contacto) form.querySelector('[name="contacto"]').value = data.contacto;
+		if (data.iban) form.querySelector('[name="iban"]').value = data.iban;
+		if (data.prazo_pagamento) form.querySelector('[name="prazo_pagamento"]').value = data.prazo_pagamento;
+		if (data.notas) form.querySelector('[name="notas"]').value = data.notas;
+	}
+
+	function saveFornecedor(apiUrl, nonce, id, form) {
+		const formData = new FormData(form);
+		const data = {
+			nome: formData.get('nome'),
+			categoria: formData.get('categoria') || null,
+			nif: formData.get('nif') || null,
+			contacto: formData.get('contacto') || null,
+			iban: formData.get('iban') || null,
+			prazo_pagamento: formData.get('prazo_pagamento') ? parseInt(formData.get('prazo_pagamento')) : null,
+			notas: formData.get('notas') || null,
+		};
+
+		const method = id ? 'PUT' : 'POST';
+		const url = id ? `${apiUrl}fornecedores/${id}` : `${apiUrl}fornecedores`;
+
+		fetch(url, {
+			method: method,
+			headers: {
+				'Content-Type': 'application/json',
+				'X-WP-Nonce': nonce,
+			},
+			body: JSON.stringify(data),
+		})
+			.then(response => response.json())
+			.then(result => {
+				if (result.code) {
+					alert('Erro: ' + result.message);
+				} else {
+					document.getElementById('gf-modal-fornecedor').style.display = 'none';
+					loadFornecedores(apiUrl, nonce);
+					// Update supplier selects in expense forms
+					document.querySelectorAll('[name="fornecedor_id"]').forEach(sel => {
+						populateFornecedorSelect(sel);
+					});
+				}
+			})
+			.catch(error => {
+				alert('Erro ao guardar: ' + error.message);
+			});
+	}
+
+	function deleteFornecedor(apiUrl, nonce, id) {
+		fetch(`${apiUrl}fornecedores/${id}`, {
+			method: 'DELETE',
+			headers: { 'X-WP-Nonce': nonce },
+		})
+			.then(response => {
+				if (response.ok || response.status === 204) {
+					loadFornecedores(apiUrl, nonce);
+					loadSummary(apiUrl, nonce);
+				} else {
+					return response.json().then(err => {
+						throw new Error(err.message || 'Erro ao eliminar');
+					});
+				}
+			})
+			.catch(error => {
+				alert('Erro: ' + error.message);
+			});
+	}
+
+	function initFuncionariosTab(apiUrl, nonce) {
+		const content = document.querySelector('[data-tab-content="funcionarios"]');
+		if (!content) return;
+
+		// Load employees
+		loadFuncionarios(apiUrl, nonce);
+
+		// Add button
+		content.querySelector('[data-action="add-funcionario"]')?.addEventListener('click', () => {
+			openFuncionarioModal(apiUrl, nonce);
+		});
+	}
+
+	function loadFuncionarios(apiUrl, nonce) {
+		const list = document.querySelector('.gf-funcionarios-list');
+		if (!list) return;
+
+		list.innerHTML = '<div class="gf-loading">A carregar...</div>';
+
+		fetch(`${apiUrl}funcionarios`, {
+			headers: { 'X-WP-Nonce': nonce },
+		})
+			.then(r => {
+				if (!r.ok) {
+					throw new Error(`HTTP error! status: ${r.status}`);
+				}
+				return r.json();
+			})
+			.then(data => {
+				if (!Array.isArray(data)) {
+					console.error('Funcionarios response is not an array:', data);
+					list.innerHTML = '<div class="gf-error">Erro ao carregar funcionários.</div>';
+					return;
+				}
+
+				if (data.length === 0) {
+					list.innerHTML = '<p>Nenhum funcionário encontrado. Clique em "Adicionar Funcionário" para criar um.</p>';
+					return;
+				}
+
+				// Load establishments to show names instead of IDs
+				fetch(`${apiUrl}estabelecimentos`, {
+					headers: { 'X-WP-Nonce': nonce },
+				})
+					.then(r => r.json())
+					.then(estabelecimentos => {
+						const estabMap = {};
+						if (Array.isArray(estabelecimentos)) {
+							estabelecimentos.forEach(e => {
+								estabMap[e.id] = e.nome;
+							});
+						}
+
+						list.innerHTML = data.map(func => {
+							const tipoPagamento = func.tipo_pagamento === 'fixo' ? 'Fixo' : func.tipo_pagamento === 'diario' ? 'Diário' : 'Hora';
+							const valor = formatCurrency(func.valor_base);
+							const estabNome = func.estabelecimento_id && estabMap[func.estabelecimento_id] 
+								? estabMap[func.estabelecimento_id] 
+								: func.estabelecimento_id ? `ID: ${func.estabelecimento_id}` : 'Sem estabelecimento';
+							
+							return `
+								<div class="gf-movimento-item">
+									<div>
+										<strong>${func.nome}</strong>
+										<span style="margin-left: 10px;">${tipoPagamento}: ${valor}</span>
+										<span style="margin-left: 10px; color: var(--gf-text-secondary);">${estabNome}</span>
+									</div>
+									<div>
+										<button class="gf-button" data-action="edit-funcionario" data-id="${func.id}">Editar</button>
+										<button class="gf-button" data-action="delete-funcionario" data-id="${func.id}">Eliminar</button>
+									</div>
+								</div>
+							`;
+						}).join('');
+
+						// Add event listeners
+						list.querySelectorAll('[data-action="edit-funcionario"]').forEach(btn => {
+							btn.addEventListener('click', () => {
+								openFuncionarioModal(apiUrl, nonce, btn.dataset.id);
+							});
+						});
+
+						list.querySelectorAll('[data-action="delete-funcionario"]').forEach(btn => {
+							btn.addEventListener('click', () => {
+								if (confirm('Tem a certeza que deseja eliminar este funcionário?')) {
+									deleteFuncionario(apiUrl, nonce, btn.dataset.id);
+								}
+							});
+						});
+					})
+					.catch(error => {
+						console.error('Error loading establishments for funcionarios:', error);
+						// Show list anyway without establishment names
+						list.innerHTML = data.map(func => {
+							const tipoPagamento = func.tipo_pagamento === 'fixo' ? 'Fixo' : func.tipo_pagamento === 'diario' ? 'Diário' : 'Hora';
+							const valor = formatCurrency(func.valor_base);
+							return `
+								<div class="gf-movimento-item">
+									<div>
+										<strong>${func.nome}</strong>
+										<span style="margin-left: 10px;">${tipoPagamento}: ${valor}</span>
+									</div>
+									<div>
+										<button class="gf-button" data-action="edit-funcionario" data-id="${func.id}">Editar</button>
+										<button class="gf-button" data-action="delete-funcionario" data-id="${func.id}">Eliminar</button>
+									</div>
+								</div>
+							`;
+						}).join('');
+
+						// Add event listeners
+						list.querySelectorAll('[data-action="edit-funcionario"]').forEach(btn => {
+							btn.addEventListener('click', () => {
+								openFuncionarioModal(apiUrl, nonce, btn.dataset.id);
+							});
+						});
+
+						list.querySelectorAll('[data-action="delete-funcionario"]').forEach(btn => {
+							btn.addEventListener('click', () => {
+								if (confirm('Tem a certeza que deseja eliminar este funcionário?')) {
+									deleteFuncionario(apiUrl, nonce, btn.dataset.id);
+								}
+							});
+						});
+					});
+			})
+			.catch(error => {
+				list.innerHTML = `<div class="gf-error">Erro ao carregar funcionários: ${error.message}</div>`;
+			});
+	}
+
+	function openFuncionarioModal(apiUrl, nonce, id = null) {
+		const modal = document.getElementById('gf-modal-funcionario');
+		const form = document.getElementById('gf-form-funcionario');
+		if (!modal || !form) return;
+
+		modal.style.display = 'flex';
+
+		// Close modal on X click
+		const closeHandler = () => {
+			modal.style.display = 'none';
+			document.removeEventListener('keydown', escHandler);
+			modal.querySelector('.gf-modal-close')?.removeEventListener('click', closeHandler);
+		};
+		modal.querySelector('.gf-modal-close')?.addEventListener('click', closeHandler);
+
+		// Close modal on ESC key
+		const escHandler = (e) => {
+			if (e.key === 'Escape' && modal.style.display === 'flex') {
+				closeHandler();
+			}
+		};
+		document.addEventListener('keydown', escHandler);
+
+		// Load data if editing
+		if (id) {
+			fetch(`${apiUrl}funcionarios/${id}`, {
+				headers: { 'X-WP-Nonce': nonce },
+			})
+				.then(r => r.json())
+				.then(data => {
+					populateFuncionarioForm(form, data);
+				});
+		} else {
+			form.innerHTML = getFuncionarioFormHTML();
+			// Populate establishment select when creating new
+			setTimeout(() => {
+				populateEstabelecimentoSelect(form.querySelector('[name="estabelecimento_id"]'));
+			}, 100);
+		}
+
+		// Submit form
+		form.onsubmit = (e) => {
+			e.preventDefault();
+			saveFuncionario(apiUrl, nonce, id, form);
+		};
+	}
+
+	function getFuncionarioFormHTML() {
+		return `
+			<div class="gf-form-group">
+				<label>Nome</label>
+				<input type="text" name="nome" class="gf-input" required>
+			</div>
+			<div class="gf-form-group">
+				<label>Estabelecimento (opcional)</label>
+				<select name="estabelecimento_id" class="gf-input">
+					<option value="">-- Selecionar --</option>
+				</select>
+			</div>
+			<div class="gf-form-group">
+				<label>Tipo de Pagamento</label>
+				<select name="tipo_pagamento" class="gf-input" required>
+					<option value="fixo">Fixo (Mensal)</option>
+					<option value="diario">Diário</option>
+					<option value="hora">Por Hora</option>
+				</select>
+			</div>
+			<div class="gf-form-group">
+				<label>Valor Base</label>
+				<input type="number" step="0.01" name="valor_base" class="gf-input" required>
+				<small style="color: var(--gf-text-secondary); margin-top: 5px; display: block;">
+					Valor mensal para "Fixo", valor por dia para "Diário", ou valor por hora para "Por Hora"
+				</small>
+			</div>
+			<div class="gf-form-group">
+				<label>IBAN (opcional)</label>
+				<input type="text" name="iban" class="gf-input" placeholder="PT50001234567890123456789">
+			</div>
+			<div class="gf-form-group">
+				<label>Regra de Pagamento (opcional)</label>
+				<input type="text" name="regra_pagamento" class="gf-input" placeholder="ex: Mensal, Semanal">
+			</div>
+			<div class="gf-form-group">
+				<label>Notas (opcional)</label>
+				<textarea name="notas" class="gf-input" rows="3"></textarea>
+			</div>
+			<div class="gf-form-group">
+				<button type="submit" class="gf-button gf-button-primary">Guardar</button>
+			</div>
+		`;
+	}
+
+	function populateFuncionarioForm(form, data) {
+		form.innerHTML = getFuncionarioFormHTML();
+		
+		// Load establishments
+		populateEstabelecimentoSelect(form.querySelector('[name="estabelecimento_id"]'));
+		
+		if (data.nome) form.querySelector('[name="nome"]').value = data.nome;
+		if (data.estabelecimento_id) form.querySelector('[name="estabelecimento_id"]').value = data.estabelecimento_id;
+		if (data.tipo_pagamento) form.querySelector('[name="tipo_pagamento"]').value = data.tipo_pagamento;
+		if (data.valor_base) form.querySelector('[name="valor_base"]').value = data.valor_base;
+		if (data.iban) form.querySelector('[name="iban"]').value = data.iban;
+		if (data.regra_pagamento) form.querySelector('[name="regra_pagamento"]').value = data.regra_pagamento;
+		if (data.notas) form.querySelector('[name="notas"]').value = data.notas;
+	}
+
+	function saveFuncionario(apiUrl, nonce, id, form) {
+		const formData = new FormData(form);
+		const data = {
+			nome: formData.get('nome'),
+			estabelecimento_id: formData.get('estabelecimento_id') ? parseInt(formData.get('estabelecimento_id')) : null,
+			tipo_pagamento: formData.get('tipo_pagamento'),
+			valor_base: parseFloat(formData.get('valor_base')) || 0,
+			iban: formData.get('iban') || null,
+			regra_pagamento: formData.get('regra_pagamento') || null,
+			notas: formData.get('notas') || null,
+		};
+
+		const method = id ? 'PUT' : 'POST';
+		const url = id ? `${apiUrl}funcionarios/${id}` : `${apiUrl}funcionarios`;
+
+		fetch(url, {
+			method: method,
+			headers: {
+				'Content-Type': 'application/json',
+				'X-WP-Nonce': nonce,
+			},
+			body: JSON.stringify(data),
+		})
+			.then(response => response.json())
+			.then(result => {
+				if (result.code) {
+					alert('Erro: ' + result.message);
+				} else {
+					document.getElementById('gf-modal-funcionario').style.display = 'none';
+					loadFuncionarios(apiUrl, nonce);
+					// Reload salaries tab
+					loadSalaries(apiUrl, nonce);
+				}
+			})
+			.catch(error => {
+				alert('Erro ao guardar: ' + error.message);
+			});
+	}
+
+	function deleteFuncionario(apiUrl, nonce, id) {
+		fetch(`${apiUrl}funcionarios/${id}`, {
+			method: 'DELETE',
+			headers: { 'X-WP-Nonce': nonce },
+		})
+			.then(response => {
+				if (response.ok || response.status === 204) {
+					loadFuncionarios(apiUrl, nonce);
+					loadSalaries(apiUrl, nonce);
+					loadSummary(apiUrl, nonce);
+				} else {
+					return response.json().then(err => {
+						throw new Error(err.message || 'Erro ao eliminar');
+					});
+				}
+			})
+			.catch(error => {
+				alert('Erro: ' + error.message);
+			});
 	}
 
 	function initHelpTab(apiUrl, nonce) {

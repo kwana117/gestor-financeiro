@@ -300,14 +300,26 @@ class CSV {
 		$lines = explode( "\n", $csv_content );
 		$rows = array();
 
+		// Detect separator from first line (comma or semicolon)
+		$separator = ',';
+		if ( ! empty( $lines ) ) {
+			$first_line = trim( $lines[0] );
+			// If first line has more semicolons than commas, use semicolon
+			$semicolon_count = substr_count( $first_line, ';' );
+			$comma_count = substr_count( $first_line, ',' );
+			if ( $semicolon_count > $comma_count ) {
+				$separator = ';';
+			}
+		}
+
 		foreach ( $lines as $line ) {
 			$line = trim( $line );
 			if ( empty( $line ) ) {
 				continue;
 			}
 
-			// Parse CSV line with semicolon separator.
-			$fields = str_getcsv( $line, ';' );
+			// Parse CSV line with detected separator (comma is standard, but support semicolon for backwards compatibility).
+			$fields = str_getcsv( $line, $separator );
 			if ( ! empty( $fields ) ) {
 				$rows[] = $fields;
 			}
@@ -626,14 +638,108 @@ class CSV {
 	}
 
 	/**
+	 * Get CSV template (example with headers and sample data).
+	 *
+	 * @param string $type 'despesas' or 'receitas'.
+	 * @return string CSV content.
+	 */
+	public function get_template( string $type ): string {
+		if ( 'despesas' === $type ) {
+			return $this->get_despesas_template();
+		} else {
+			return $this->get_receitas_template();
+		}
+	}
+
+	/**
+	 * Get expenses CSV template.
+	 *
+	 * @return string CSV content.
+	 */
+	private function get_despesas_template(): string {
+		$headers = array(
+			__( 'Data', 'gestor-financeiro' ),
+			__( 'Estabelecimento', 'gestor-financeiro' ),
+			__( 'Fornecedor', 'gestor-financeiro' ),
+			__( 'Funcionário', 'gestor-financeiro' ),
+			__( 'Tipo', 'gestor-financeiro' ),
+			__( 'Descrição', 'gestor-financeiro' ),
+			__( 'Valor', 'gestor-financeiro' ),
+			__( 'Vencimento', 'gestor-financeiro' ),
+			__( 'Pago', 'gestor-financeiro' ),
+			__( 'Notas', 'gestor-financeiro' ),
+		);
+
+		$lines = array();
+		$lines[] = implode( ',', array_map( array( $this, 'escape_csv_field' ), $headers ) );
+		
+		// Add example row
+		$example_row = array(
+			date( 'd/m/Y', strtotime( 'today' ) ),
+			__( 'Exemplo Restaurante', 'gestor-financeiro' ),
+			__( 'Exemplo Fornecedor', 'gestor-financeiro' ),
+			'',
+			__( 'Alimentação', 'gestor-financeiro' ),
+			__( 'Compras semanais', 'gestor-financeiro' ),
+			'450.00',
+			date( 'd/m/Y', strtotime( '+7 days' ) ),
+			__( 'Não', 'gestor-financeiro' ),
+			__( 'Notas de exemplo', 'gestor-financeiro' ),
+		);
+		$lines[] = implode( ',', array_map( array( $this, 'escape_csv_field' ), $example_row ) );
+
+		// Convert to CSV with CRLF line endings for better compatibility (especially macOS Numbers)
+		// Use \r\n (CRLF) instead of just \n (LF) for maximum compatibility
+		$csv = implode( "\r\n", $lines );
+
+		return $csv;
+	}
+
+	/**
+	 * Get revenue CSV template.
+	 *
+	 * @return string CSV content.
+	 */
+	private function get_receitas_template(): string {
+		$headers = array(
+			__( 'Data', 'gestor-financeiro' ),
+			__( 'Estabelecimento', 'gestor-financeiro' ),
+			__( 'Bruto', 'gestor-financeiro' ),
+			__( 'Taxas', 'gestor-financeiro' ),
+			__( 'Líquido', 'gestor-financeiro' ),
+			__( 'Notas', 'gestor-financeiro' ),
+		);
+
+		$lines = array();
+		$lines[] = implode( ',', array_map( array( $this, 'escape_csv_field' ), $headers ) );
+		
+		// Add example row
+		$example_row = array(
+			date( 'd/m/Y', strtotime( 'today' ) ),
+			__( 'Exemplo Restaurante', 'gestor-financeiro' ),
+			'2500.00',
+			'125.00',
+			'2375.00',
+			__( 'Vendas do dia', 'gestor-financeiro' ),
+		);
+		$lines[] = implode( ',', array_map( array( $this, 'escape_csv_field' ), $example_row ) );
+
+		// Convert to CSV with CRLF line endings for better compatibility (especially macOS Numbers)
+		// Use \r\n (CRLF) instead of just \n (LF) for maximum compatibility
+		$csv = implode( "\r\n", $lines );
+
+		return $csv;
+	}
+
+	/**
 	 * Escape CSV field.
 	 *
 	 * @param string $field Field value.
 	 * @return string Escaped field.
 	 */
 	private function escape_csv_field( string $field ): string {
-		// If field contains semicolon, newline, or double quote, wrap in quotes and escape quotes.
-		if ( strpos( $field, ';' ) !== false || strpos( $field, "\n" ) !== false || strpos( $field, '"' ) !== false ) {
+		// If field contains comma, newline, or double quote, wrap in quotes and escape quotes.
+		if ( strpos( $field, ',' ) !== false || strpos( $field, "\n" ) !== false || strpos( $field, '"' ) !== false ) {
 			$field = '"' . str_replace( '"', '""', $field ) . '"';
 		}
 		return $field;
