@@ -1,11 +1,106 @@
 /* Gestor Financeiro - Frontend Styles (scoped under .gf-app) */
 
+/* Full-screen container styles */
+/* Reset any parent container constraints */
+.wp-site-blocks .gf-app,
+.entry-content .gf-app,
+.wp-block-post-content .gf-app,
+.content .gf-app,
+main .gf-app,
+article .gf-app,
+section .gf-app {
+  position: static;
+  left: auto;
+  right: auto;
+  margin-left: auto;
+  margin-right: auto;
+  width: auto;
+  max-width: none;
+}
+
+/* CSS Variables for Dark Mode */
+html.gf-dark-mode-inline,
+.gf-app {
+  --gf-bg-primary: #ffffff;
+  --gf-bg-secondary: #f9f9f9;
+  --gf-bg-tertiary: #f0f0f1;
+  --gf-text-primary: #1e1e1e;
+  --gf-text-secondary: #666;
+  --gf-border-color: #ddd;
+  --gf-border-light: #eee;
+  --gf-card-bg: #ffffff;
+  --gf-shadow: rgba(0, 0, 0, 0.1);
+  --gf-modal-overlay: rgba(0, 0, 0, 0.5);
+  --gf-button-secondary-bg: #f0f0f1;
+  --gf-button-secondary-hover: #ddd;
+  --gf-error-bg: #fcf0f1;
+  --gf-success-bg: #f0f6fc;
+}
+
+html.gf-dark-mode-inline .gf-app,
+.gf-app.dark-mode {
+  --gf-bg-primary: #131313;
+  --gf-bg-secondary: #1a1a1a;
+  --gf-bg-tertiary: #242424;
+  --gf-text-primary: #e0e0e0;
+  --gf-text-secondary: #a0a0a0;
+  --gf-border-color: #333;
+  --gf-border-light: #2a2a2a;
+  --gf-card-bg: #1a1a1a;
+  --gf-shadow: rgba(0, 0, 0, 0.3);
+  --gf-modal-overlay: rgba(0, 0, 0, 0.7);
+  --gf-button-secondary-bg: #2a2a2a;
+  --gf-button-secondary-hover: #333;
+  --gf-error-bg: #2a1f1f;
+  --gf-success-bg: #1a2424;
+}
+
 .gf-app {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
     Ubuntu, Cantarell, sans-serif;
-  max-width: 1400px;
+  width: 100%;
+  max-width: 1100px;
+  min-height: 100vh;
   margin: 0 auto;
-  padding: 20px;
+  padding: 20px 40px;
+  background-color: var(--gf-bg-primary);
+  color: var(--gf-text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  box-sizing: border-box;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Ensure full-height background coverage */
+body:has(.gf-app),
+html:has(.gf-app) {
+  background-color: var(--gf-bg-primary);
+  transition: background-color 0.3s ease;
+  min-height: 100vh;
+}
+
+/* Apply dark mode background to body/html when app is in dark mode */
+body:has(.gf-app.dark-mode),
+html:has(.gf-app.dark-mode) {
+  background-color: #131313;
+}
+
+/* Fallback: Use data attribute for broader browser support */
+body[data-gf-app],
+html[data-gf-app] {
+  background-color: var(--gf-bg-primary);
+  transition: background-color 0.3s ease;
+  min-height: 100vh;
+}
+
+/* Prevent horizontal scrolling - scoped to app container */
+.gf-app * {
+  box-sizing: border-box;
+}
+
+/* Ensure no horizontal overflow within app children */
+.gf-app > * {
+  max-width: 100%;
 }
 
 /* Dashboard Header */
@@ -14,12 +109,96 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 15px;
+  width: 100%;
 }
 
 .gf-dashboard-header h1 {
   margin: 0;
   font-size: 2em;
-  color: #1e1e1e;
+  color: var(--gf-text-primary);
+  flex-shrink: 0;
+}
+
+.gf-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Dark Mode Toggle */
+.gf-dark-mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: var(--gf-bg-tertiary);
+  border: 1px solid var(--gf-border-color);
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--gf-text-primary);
+  transition: all 0.3s ease;
+  user-select: none;
+}
+
+.gf-dark-mode-toggle:hover {
+  background: var(--gf-button-secondary-hover);
+  border-color: var(--gf-border-color);
+  transform: translateY(-1px);
+}
+
+.gf-dark-mode-toggle:active {
+  transform: translateY(0);
+}
+
+.gf-dark-mode-toggle-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.gf-dark-mode-toggle-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  position: absolute;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.gf-dark-mode-toggle-icon .gf-icon-sun {
+  opacity: 1;
+  display: block;
+  visibility: visible;
+}
+
+.gf-dark-mode-toggle-icon .gf-icon-moon {
+  opacity: 0;
+  display: block;
+  visibility: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.gf-app.dark-mode .gf-dark-mode-toggle-icon .gf-icon-sun {
+  opacity: 0;
+  display: block;
+  visibility: hidden;
+}
+
+.gf-app.dark-mode .gf-dark-mode-toggle-icon .gf-icon-moon {
+  opacity: 1;
+  display: block;
+  visibility: visible;
 }
 
 .gf-help-link {
@@ -27,7 +206,7 @@
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  background: #f0f0f1;
+  background: var(--gf-bg-tertiary);
   color: #2271b1;
   text-decoration: none;
   border-radius: 4px;
@@ -76,7 +255,7 @@
   display: flex;
   gap: 10px;
   margin-bottom: 30px;
-  border-bottom: 2px solid #ddd;
+  border-bottom: 2px solid var(--gf-border-color);
 }
 
 .gf-tab-button {
@@ -87,12 +266,12 @@
   cursor: pointer;
   font-size: 16px;
   font-weight: 500;
-  color: #666;
+  color: var(--gf-text-secondary);
   transition: all 0.3s ease;
 }
 
 .gf-tab-button:hover {
-  color: #1e1e1e;
+  color: var(--gf-text-primary);
 }
 
 .gf-tab-button.active {
@@ -118,18 +297,20 @@
 }
 
 .gf-card {
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--gf-card-bg);
+  border: 1px solid var(--gf-border-color);
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px var(--gf-shadow);
+  transition: background-color 0.3s ease, border-color 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .gf-card h3 {
   margin: 0 0 10px 0;
   font-size: 14px;
   font-weight: 600;
-  color: #666;
+  color: var(--gf-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -137,7 +318,7 @@
 .gf-card .gf-value {
   font-size: 28px;
   font-weight: 700;
-  color: #1e1e1e;
+  color: var(--gf-text-primary);
 }
 
 /* Buttons */
@@ -162,12 +343,12 @@
 }
 
 .gf-button:not(.gf-button-primary) {
-  background: #f0f0f1;
-  color: #1e1e1e;
+  background: var(--gf-button-secondary-bg);
+  color: var(--gf-text-primary);
 }
 
 .gf-button:not(.gf-button-primary):hover {
-  background: #ddd;
+  background: var(--gf-button-secondary-hover);
 }
 
 /* Forms */
@@ -179,15 +360,19 @@
   display: block;
   margin-bottom: 8px;
   font-weight: 500;
-  color: #1e1e1e;
+  color: var(--gf-text-primary);
 }
 
 .gf-input {
   width: 100%;
   padding: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--gf-border-color);
   border-radius: 4px;
   font-size: 14px;
+  background: var(--gf-card-bg);
+  color: var(--gf-text-primary);
+  transition: background-color 0.3s ease, border-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .gf-input:focus {
@@ -214,23 +399,29 @@
 .gf-filters select,
 .gf-filters input {
   padding: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--gf-border-color);
   border-radius: 4px;
+  background: var(--gf-card-bg);
+  color: var(--gf-text-primary);
+  transition: background-color 0.3s ease, border-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .gf-movimentos-list {
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--gf-card-bg);
+  border: 1px solid var(--gf-border-color);
   border-radius: 8px;
   padding: 20px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .gf-movimento-item {
   padding: 15px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--gf-border-light);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: background-color 0.3s ease;
 }
 
 .gf-movimento-item:last-child {
@@ -238,14 +429,14 @@
 }
 
 .gf-movimento-item:hover {
-  background: #f9f9f9;
+  background: var(--gf-bg-secondary);
 }
 
 /* Loading */
 .gf-loading {
   text-align: center;
   padding: 40px;
-  color: #666;
+  color: var(--gf-text-secondary);
 }
 
 /* Modal */
@@ -256,14 +447,15 @@
   top: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--gf-modal-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background-color 0.3s ease;
 }
 
 .gf-modal-content {
-  background: #fff;
+  background: var(--gf-card-bg);
   border-radius: 8px;
   padding: 30px;
   max-width: 600px;
@@ -271,6 +463,8 @@
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
+  box-shadow: 0 4px 20px var(--gf-shadow);
+  transition: background-color 0.3s ease;
 }
 
 .gf-modal-close {
@@ -279,35 +473,39 @@
   top: 20px;
   font-size: 28px;
   font-weight: bold;
-  color: #666;
+  color: var(--gf-text-secondary);
   cursor: pointer;
   line-height: 1;
+  transition: color 0.3s ease;
 }
 
 .gf-modal-close:hover {
-  color: #1e1e1e;
+  color: var(--gf-text-primary);
 }
 
 /* Settings */
 .gf-settings-form {
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--gf-card-bg);
+  border: 1px solid var(--gf-border-color);
   border-radius: 8px;
   padding: 30px;
   max-width: 600px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .gf-settings-form h3 {
   margin-top: 0;
   margin-bottom: 20px;
+  color: var(--gf-text-primary);
 }
 
 /* Calendar */
 .gf-calendar-container {
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--gf-card-bg);
+  border: 1px solid var(--gf-border-color);
   border-radius: 8px;
   padding: 20px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 /* Salaries */
@@ -320,10 +518,11 @@
 }
 
 .gf-salarios-list {
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--gf-card-bg);
+  border: 1px solid var(--gf-border-color);
   border-radius: 8px;
   padding: 20px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 /* Reports */
@@ -335,11 +534,12 @@
 }
 
 .gf-relatorios-output {
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--gf-card-bg);
+  border: 1px solid var(--gf-border-color);
   border-radius: 8px;
   padding: 20px;
   min-height: 200px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 /* Tables */
@@ -352,46 +552,50 @@
 .gf-table td {
   padding: 12px;
   text-align: left;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--gf-border-light);
+  color: var(--gf-text-primary);
 }
 
 .gf-table th {
-  background: #f9f9f9;
+  background: var(--gf-bg-secondary);
   font-weight: 600;
-  color: #1e1e1e;
+  color: var(--gf-text-primary);
 }
 
 .gf-table tr:hover {
-  background: #f9f9f9;
+  background: var(--gf-bg-secondary);
 }
 
 /* Error messages */
 .gf-error {
   color: #d63638;
-  background: #fcf0f1;
+  background: var(--gf-error-bg);
   padding: 12px;
   border-radius: 4px;
   margin-bottom: 20px;
+  transition: background-color 0.3s ease;
 }
 
 .gf-success {
   color: #00a32a;
-  background: #f0f6fc;
+  background: var(--gf-success-bg);
   padding: 12px;
   border-radius: 4px;
   margin-bottom: 20px;
+  transition: background-color 0.3s ease;
 }
 
 /* Help Content */
 .gf-help {
   display: flex;
   gap: 0;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--gf-card-bg);
+  border: 1px solid var(--gf-border-color);
   border-radius: 8px;
   padding: 0;
   overflow: hidden;
   min-height: 600px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .gf-help-content {
@@ -413,8 +617,8 @@
 .gf-help-sidebar {
   width: 280px;
   min-width: 280px;
-  background: #f9f9f9;
-  border-right: 1px solid #ddd;
+  background: var(--gf-bg-secondary);
+  border-right: 1px solid var(--gf-border-color);
   padding: 20px;
   position: -webkit-sticky;
   position: sticky;
@@ -423,13 +627,14 @@
   height: fit-content;
   max-height: calc(100vh - 80px);
   overflow-y: auto;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .gf-help-sidebar h3 {
   margin: 0 0 15px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #1e1e1e;
+  color: var(--gf-text-primary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -447,7 +652,7 @@
 .gf-help-sidebar a {
   display: block;
   padding: 8px 12px;
-  color: #666;
+  color: var(--gf-text-secondary);
   text-decoration: none;
   font-size: 14px;
   border-radius: 4px;
@@ -455,19 +660,19 @@
 }
 
 .gf-help-sidebar a:hover {
-  background: #f0f0f1;
+  background: var(--gf-bg-tertiary);
   color: #2271b1;
 }
 
 .gf-help-sidebar a.active {
-  background: #e8f4f8;
+  background: var(--gf-bg-tertiary);
   color: #2271b1;
   font-weight: 500;
 }
 
 .gf-help-guide {
   line-height: 1.6;
-  color: #1e1e1e;
+  color: var(--gf-text-primary);
   font-size: 14px;
 }
 
@@ -475,7 +680,7 @@
   font-size: 1.75em;
   margin-top: 0;
   margin-bottom: 20px;
-  color: #1e1e1e;
+  color: var(--gf-text-primary);
   border-bottom: 2px solid #2271b1;
   padding-bottom: 10px;
 }
@@ -485,7 +690,7 @@
   margin-top: 35px;
   margin-bottom: 15px;
   color: #2271b1;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--gf-border-light);
   padding-bottom: 8px;
   scroll-margin-top: 20px;
 }
@@ -494,7 +699,7 @@
   font-size: 1.1em;
   margin-top: 25px;
   margin-bottom: 12px;
-  color: #1e1e1e;
+  color: var(--gf-text-primary);
   font-weight: 600;
   scroll-margin-top: 20px;
 }
@@ -516,11 +721,12 @@
 }
 
 .gf-help-guide code {
-  background: #f0f0f1;
+  background: var(--gf-bg-tertiary);
   padding: 2px 6px;
   border-radius: 3px;
   font-family: "Courier New", monospace;
   font-size: 13px;
+  color: var(--gf-text-primary);
 }
 
 .gf-help-guide strong {
@@ -545,7 +751,8 @@
 /* Responsive */
 @media (max-width: 768px) {
   .gf-app {
-    padding: 10px;
+    padding: 15px 20px;
+    max-width: 100%;
   }
 
   .gf-dashboard-tabs {
@@ -575,7 +782,7 @@
     position: relative;
     max-height: none;
     border-right: none;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--gf-border-color);
   }
 }
 
@@ -593,7 +800,7 @@
 }
 
 .gf-danger-zone p {
-  color: #666;
+  color: var(--gf-text-secondary);
   margin-bottom: 15px;
   line-height: 1.6;
 }

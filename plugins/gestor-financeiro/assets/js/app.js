@@ -23,6 +23,9 @@
 		const nonce = app.dataset.nonce || '';
 		const apiUrl = window.gestorFinanceiro?.apiUrl || '/wp-json/gestor-financeiro/v1/';
 
+		// Initialize dark mode
+		initDarkMode();
+
 		// Initialize tabs
 		initTabs();
 
@@ -49,6 +52,72 @@
 
 		// Initialize help link
 		initHelpLink(apiUrl, nonce);
+	}
+
+	function initDarkMode() {
+		const app = document.querySelector('.gf-app');
+		const toggle = document.getElementById('gf-dark-mode-toggle');
+		
+		if (!app || !toggle) {
+			return;
+		}
+
+		// Function to update body/html background
+		const updateBackground = (isDark) => {
+			if (isDark) {
+				document.body.style.backgroundColor = '#131313';
+				document.documentElement.style.backgroundColor = '#131313';
+			} else {
+				document.body.style.backgroundColor = '#ffffff';
+				document.documentElement.style.backgroundColor = '#ffffff';
+			}
+		};
+
+		// Check localStorage for saved preference
+		const savedMode = localStorage.getItem('gf-dark-mode');
+		const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+		
+		// Apply dark mode if saved or if system preference is dark and no saved preference
+		const shouldBeDark = savedMode === 'true' || (savedMode === null && prefersDark);
+		
+		if (shouldBeDark) {
+			app.classList.add('dark-mode');
+			updateBackground(true);
+		} else {
+			updateBackground(false);
+		}
+
+		// Listen to system preference changes (if no saved preference)
+		if (window.matchMedia) {
+			const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+			mediaQuery.addEventListener('change', (e) => {
+				// Only auto-switch if user hasn't manually set a preference
+				if (localStorage.getItem('gf-dark-mode') === null) {
+					if (e.matches) {
+						app.classList.add('dark-mode');
+						updateBackground(true);
+					} else {
+						app.classList.remove('dark-mode');
+						updateBackground(false);
+					}
+				}
+			});
+		}
+
+		// Toggle button click handler
+		toggle.addEventListener('click', () => {
+			const isDark = app.classList.contains('dark-mode');
+			
+			if (isDark) {
+				app.classList.remove('dark-mode');
+				localStorage.setItem('gf-dark-mode', 'false');
+				updateBackground(false);
+			} else {
+				app.classList.add('dark-mode');
+				localStorage.setItem('gf-dark-mode', 'true');
+				updateBackground(true);
+			}
+		});
 	}
 
 	function initTabs() {
