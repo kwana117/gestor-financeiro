@@ -2094,6 +2094,7 @@ class RestController
             'nome' => isset($data['nome']) ? sanitize_text_field($data['nome']) : '',
             'tipo' => isset($data['tipo']) ? sanitize_text_field($data['tipo']) : 'restaurante',
             'dia_renda' => isset($data['dia_renda']) ? absint($data['dia_renda']) : null,
+            'valor_renda' => isset($data['valor_renda']) ? floatval($data['valor_renda']) : null,
             'ativo' => isset($data['ativo']) ? absint($data['ativo']) : 1,
         );
     }

@@ -1414,7 +1414,7 @@
 						<div>
 							<strong>${est.nome}</strong> - ${est.tipo}
 							${est.ativo ? '<span style="color: #00a32a; margin-left: 10px;">● Ativo</span>' : '<span style="color: #d63638; margin-left: 10px;">● Inativo</span>'}
-							${est.dia_renda ? `<span style="margin-left: 10px;">Dia de renda: ${est.dia_renda}</span>` : ''}
+							${est.valor_renda ? `<span style="margin-left: 10px;">Valor da renda: ${formatCurrency(est.valor_renda)}</span>` : ''}
 						</div>
 						<div>
 							<button class="gf-button" data-action="edit-estabelecimento" data-id="${est.id}">Editar</button>
@@ -1505,6 +1505,10 @@
 				<input type="number" name="dia_renda" class="gf-input" min="1" max="31">
 			</div>
 			<div class="gf-form-group">
+				<label>Valor da Renda Mensal (opcional)</label>
+				<input type="number" name="valor_renda" class="gf-input" step="0.01" min="0">
+			</div>
+			<div class="gf-form-group">
 				<label>
 					<input type="checkbox" name="ativo" value="1" checked> Ativo
 				</label>
@@ -1520,6 +1524,7 @@
 		if (data.nome) form.querySelector('[name="nome"]').value = data.nome;
 		if (data.tipo) form.querySelector('[name="tipo"]').value = data.tipo;
 		if (data.dia_renda) form.querySelector('[name="dia_renda"]').value = data.dia_renda;
+		if (data.valor_renda) form.querySelector('[name="valor_renda"]').value = data.valor_renda;
 		if (data.ativo) form.querySelector('[name="ativo"]').checked = data.ativo == 1;
 	}
 
@@ -1529,6 +1534,7 @@
 			nome: formData.get('nome'),
 			tipo: formData.get('tipo'),
 			dia_renda: formData.get('dia_renda') ? parseInt(formData.get('dia_renda')) : null,
+			valor_renda: formData.get('valor_renda') ? parseFloat(formData.get('valor_renda')) : null,
 			ativo: formData.get('ativo') ? 1 : 0,
 		};
 

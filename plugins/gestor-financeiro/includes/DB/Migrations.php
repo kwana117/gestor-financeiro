@@ -33,6 +33,10 @@ class Migrations {
 			self::migrate( $current_version, $required_version );
 			Tables::update_db_version( $required_version );
 		}
+
+		// Always ensure valor_renda column exists (for existing installations).
+		// This is safe to run multiple times as it checks if column exists first.
+		self::add_valor_renda_column();
 	}
 
 	/**
@@ -46,10 +50,60 @@ class Migrations {
 		// If version is 0.0.0, run initial migration.
 		if ( '0.0.0' === $from_version ) {
 			self::create_tables();
+		} else {
+			// For existing installations, ensure valor_renda column exists.
+			// This function checks if column exists before adding it.
+			self::add_valor_renda_column();
 		}
 
 		// Future migrations can be added here.
 		// Example: if ( version_compare( $from_version, '1.1.0', '<' ) ) { ... }
+	}
+
+	/**
+	 * Add valor_renda column to estabelecimentos table.
+	 *
+	 * @return void
+	 */
+	private static function add_valor_renda_column(): void {
+		global $wpdb;
+		$table_name = Tables::get_table_name( 'estabelecimentos' );
+
+		// Check if table exists first.
+		$table_exists = $wpdb->get_var(
+			$wpdb->prepare(
+				"SHOW TABLES LIKE %s",
+				$table_name
+			)
+		);
+
+		if ( ! $table_exists ) {
+			return;
+		}
+
+		// Check if column already exists using SHOW COLUMNS (more compatible).
+		$column_exists = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+				WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'valor_renda'",
+				$wpdb->dbname,
+				$table_name
+			)
+		);
+
+		if ( empty( $column_exists ) || 0 === (int) $column_exists ) {
+			$result = $wpdb->query(
+				"ALTER TABLE {$table_name} ADD COLUMN valor_renda decimal(12,2) DEFAULT NULL AFTER dia_renda"
+			);
+
+			// If query failed, try alternative method.
+			if ( false === $result ) {
+				// Try using dbDelta approach.
+				require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+				$schema = self::get_estabelecimentos_schema();
+				dbDelta( $schema );
+			}
+		}
 	}
 
 	/**
@@ -100,6 +154,7 @@ class Migrations {
 			nome varchar(255) NOT NULL,
 			tipo enum('restaurante','bar','apartamento') NOT NULL DEFAULT 'restaurante',
 			dia_renda tinyint(3) UNSIGNED DEFAULT NULL,
+			valor_renda decimal(12,2) DEFAULT NULL,
 			ativo tinyint(1) UNSIGNED NOT NULL DEFAULT 1,
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
