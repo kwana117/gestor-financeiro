@@ -2290,13 +2290,23 @@ class RestController
 
     private function sanitize_receita_data(array $data): array
     {
+        // Support both old format (liquido) and new format (valor)
+        $valor = 0.00;
+        if (isset($data['valor'])) {
+            $valor = (float) $data['valor'];
+        } elseif (isset($data['liquido'])) {
+            $valor = (float) $data['liquido'];
+        } elseif (isset($data['bruto']) && isset($data['taxas'])) {
+            $valor = (float) $data['bruto'] - (float) $data['taxas'];
+        } elseif (isset($data['bruto'])) {
+            $valor = (float) $data['bruto'];
+        }
+
         return array(
             'data' => isset($data['data']) ? sanitize_text_field($data['data']) : current_time('Y-m-d'),
             'estabelecimento_id' => isset($data['estabelecimento_id']) ? absint($data['estabelecimento_id']) : null,
             'canal' => isset($data['canal']) ? sanitize_text_field($data['canal']) : null,
-            'bruto' => isset($data['bruto']) ? (float) $data['bruto'] : 0.00,
-            'taxas' => isset($data['taxas']) ? (float) $data['taxas'] : 0.00,
-            'liquido' => isset($data['liquido']) ? (float) $data['liquido'] : 0.00,
+            'valor' => $valor,
             'notas' => isset($data['notas']) ? sanitize_textarea_field($data['notas']) : null,
             'anexo' => isset($data['anexo']) ? absint($data['anexo']) : null,
         );

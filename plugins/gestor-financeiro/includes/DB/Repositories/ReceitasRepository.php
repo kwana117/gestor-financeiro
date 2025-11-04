@@ -71,17 +71,25 @@ class ReceitasRepository extends BaseRepository {
 	 * @param int $month Month (1-12).
 	 * @param int $year Year.
 	 * @param int|null $estabelecimento_id Optional establishment ID.
-	 * @param string $field Field to sum (bruto, taxas, liquido). Default: liquido.
+	 * @param string $field Field to sum (valor, bruto, taxas, liquido). Default: valor.
 	 * @return float
 	 */
-	public function getMonthlyTotal( int $month, int $year, ?int $estabelecimento_id = null, string $field = 'liquido' ): float {
+	public function getMonthlyTotal( int $month, int $year, ?int $estabelecimento_id = null, string $field = 'valor' ): float {
 		global $wpdb;
 		$table_name = $this->get_table_name();
 
-		// Validate field.
-		$allowed_fields = array( 'bruto', 'taxas', 'liquido' );
+		// Validate field. Support both new format (valor) and old format (liquido, bruto, taxas) for backward compatibility.
+		$allowed_fields = array( 'valor', 'bruto', 'taxas', 'liquido' );
 		if ( ! in_array( $field, $allowed_fields, true ) ) {
-			$field = 'liquido';
+			$field = 'valor';
+		}
+		
+		// If field is 'valor' but column doesn't exist, fall back to 'liquido' for backward compatibility
+		if ( 'valor' === $field ) {
+			$column_exists = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'valor'", DB_NAME, $table_name ) );
+			if ( ! $column_exists ) {
+				$field = 'liquido';
+			}
 		}
 
 		$where = array( 'MONTH(data) = %d', 'YEAR(data) = %d' );

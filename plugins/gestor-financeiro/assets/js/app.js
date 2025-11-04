@@ -550,7 +550,7 @@
 					item.className = 'gf-movimento-item';
 					item.innerHTML = `
 						<div>
-							<strong>${formatDate(movement.data)}</strong> - ${movement.descricao || movement.canal || ''}
+							<strong>${formatDate(movement.data)}</strong> - ${movement.descricao || movement.notas || movement.canal || ''}
 							${estabelecimentoNome ? `<span style="color: #00a32a; margin-left: 10px;">[${estabelecimentoNome}]</span>` : ''}
 							<span style="color: ${movement.type === 'despesa' ? '#d63638' : '#00a32a'}; margin-left: 10px;">
 								${movement.type === 'despesa' ? '-' : '+'} ${formatCurrency(movement.valor || movement.liquido || 0)}
@@ -725,25 +725,26 @@
 			</div>
 			<div class="gf-form-group">
 				<label>Canal</label>
-				<input type="text" name="canal" class="gf-input">
+				<select name="canal" class="gf-input" required>
+					<option value="">-- Selecionar --</option>
+					<option value="Dinheiro">Dinheiro</option>
+					<option value="myPOS">myPOS</option>
+					<option value="MBWAY">MBWAY</option>
+				</select>
 			</div>
 			<div class="gf-form-group">
-				<label>Bruto</label>
-				<input type="number" step="0.01" name="bruto" class="gf-input" required>
-			</div>
-			<div class="gf-form-group">
-				<label>Taxas</label>
-				<input type="number" step="0.01" name="taxas" class="gf-input" value="0">
-			</div>
-			<div class="gf-form-group">
-				<label>Líquido</label>
-				<input type="number" step="0.01" name="liquido" class="gf-input" required>
+				<label>Valor</label>
+				<input type="number" step="0.01" name="valor" class="gf-input" required>
 			</div>
 			<div class="gf-form-group">
 				<label>Estabelecimento</label>
 				<select name="estabelecimento_id" class="gf-input">
 					<option value="">-- Selecionar --</option>
 				</select>
+			</div>
+			<div class="gf-form-group">
+				<label>Descrição</label>
+				<textarea name="notas" class="gf-input" rows="3"></textarea>
 			</div>
 			<div class="gf-form-group">
 				<button type="submit" class="gf-button gf-button-primary">Guardar</button>
@@ -774,10 +775,14 @@
 		
 		if (data.data) form.querySelector('[name="data"]').value = data.data;
 		if (data.canal) form.querySelector('[name="canal"]').value = data.canal;
-		if (data.bruto) form.querySelector('[name="bruto"]').value = data.bruto;
-		if (data.taxas) form.querySelector('[name="taxas"]').value = data.taxas;
-		if (data.liquido) form.querySelector('[name="liquido"]').value = data.liquido;
+		// Support both old format (liquido) and new format (valor)
+		if (data.valor) {
+			form.querySelector('[name="valor"]').value = data.valor;
+		} else if (data.liquido) {
+			form.querySelector('[name="valor"]').value = data.liquido;
+		}
 		if (data.estabelecimento_id) form.querySelector('[name="estabelecimento_id"]').value = data.estabelecimento_id;
+		if (data.notas) form.querySelector('[name="notas"]').value = data.notas;
 	}
 
 	function saveDespesa(apiUrl, nonce, id, form) {
@@ -1184,7 +1189,7 @@
 				if (type === 'despesas') {
 					html += '<th>Data</th><th>Estabelecimento</th><th>Descrição</th><th>Valor</th><th>Vencimento</th>';
 				} else {
-					html += '<th>Data</th><th>Estabelecimento</th><th>Bruto</th><th>Taxas</th><th>Líquido</th>';
+					html += '<th>Data</th><th>Canal</th><th>Valor</th><th>Estabelecimento</th><th>Descrição</th>';
 				}
 				html += '</tr></thead><tbody>';
 
@@ -1199,10 +1204,12 @@
 						html += `<td>${row.vencimento || ''}</td>`;
 					} else {
 						html += `<td>${row.data || ''}</td>`;
+						html += `<td>${row.canal || ''}</td>`;
+						// Support both old format (liquido) and new format (valor)
+						const valor = row.valor || row.liquido || (row.bruto && row.taxas ? row.bruto - row.taxas : row.bruto) || 0;
+						html += `<td>${formatCurrency(valor)}</td>`;
 						html += `<td>${row.estabelecimento_id || ''}</td>`;
-						html += `<td>${formatCurrency(row.bruto || 0)}</td>`;
-						html += `<td>${formatCurrency(row.taxas || 0)}</td>`;
-						html += `<td>${formatCurrency(row.liquido || 0)}</td>`;
+						html += `<td>${row.notas || ''}</td>`;
 					}
 					html += '</tr>';
 				});
@@ -1925,7 +1932,7 @@
 							return `
 								<div class="gf-movimento-item">
 									<div>
-										<strong>${func.nome}</strong>
+										<strong style="color: #4a9eff;">${func.nome}</strong>
 										<span style="margin-left: 10px;">${tipoPagamento}: ${valor}</span>
 										<span style="margin-left: 10px; color: var(--gf-text-secondary);">${estabNome}</span>
 									</div>
@@ -1961,7 +1968,7 @@
 							return `
 								<div class="gf-movimento-item">
 									<div>
-										<strong>${func.nome}</strong>
+										<strong style="color: #4a9eff;">${func.nome}</strong>
 										<span style="margin-left: 10px;">${tipoPagamento}: ${valor}</span>
 									</div>
 									<div>

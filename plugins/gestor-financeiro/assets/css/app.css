@@ -351,12 +351,21 @@ html[data-gf-app] {
 }
 
 .gf-button-primary {
-  background: #2271b1;
+  background: linear-gradient(135deg, #1c6dd0 0%, #133b7a 100%);
   color: #fff;
+  border: none;
+  transition: all 0.2s ease;
 }
 
 .gf-button-primary:hover {
-  background: #135e96;
+  background: linear-gradient(135deg, #1559b0 0%, #0e2f5a 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(28, 109, 208, 0.3);
+}
+
+.gf-button-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(28, 109, 208, 0.2);
 }
 
 .gf-button:not(.gf-button-primary) {

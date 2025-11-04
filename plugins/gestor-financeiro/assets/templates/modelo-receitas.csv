@@ -1,3 +1,2 @@
-Data,Estabelecimento,Bruto,Taxas,Líquido,Notas
-04/11/2025,Exemplo Restaurante,2500.00,125.00,2375.00,Vendas do dia
-
+Data,Canal,Valor,Estabelecimento,Descrição
+04/11/2025,Dinheiro,2375.00,Exemplo Restaurante,Vendas do dia

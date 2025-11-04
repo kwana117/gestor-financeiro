@@ -140,11 +140,10 @@ class CSV
 		// Build CSV headers.
 		$headers = array(
 			__('Data', 'gestor-financeiro'),
+			__('Canal', 'gestor-financeiro'),
+			__('Valor', 'gestor-financeiro'),
 			__('Estabelecimento', 'gestor-financeiro'),
-			__('Bruto', 'gestor-financeiro'),
-			__('Taxas', 'gestor-financeiro'),
-			__('Líquido', 'gestor-financeiro'),
-			__('Notas', 'gestor-financeiro'),
+			__('Descrição', 'gestor-financeiro'),
 		);
 
 		$lines = array();
@@ -157,12 +156,23 @@ class CSV
 				$estabelecimento = $estabelecimentos_repo->find((int) $receita['estabelecimento_id']);
 			}
 
+			// Support both old format (liquido) and new format (valor)
+			$valor = 0.00;
+			if (isset($receita['valor'])) {
+				$valor = (float) $receita['valor'];
+			} elseif (isset($receita['liquido'])) {
+				$valor = (float) $receita['liquido'];
+			} elseif (isset($receita['bruto']) && isset($receita['taxas'])) {
+				$valor = (float) $receita['bruto'] - (float) $receita['taxas'];
+			} elseif (isset($receita['bruto'])) {
+				$valor = (float) $receita['bruto'];
+			}
+
 			$row = array(
 				$this->normalize_date_export($receita['data'] ?? ''),
+				$receita['canal'] ?? '',
+				$this->normalize_number_export($valor),
 				$estabelecimento ? $estabelecimento['nome'] : '',
-				$this->normalize_number_export((float) ($receita['bruto'] ?? 0)),
-				$this->normalize_number_export((float) ($receita['taxas'] ?? 0)),
-				$this->normalize_number_export((float) ($receita['liquido'] ?? 0)),
 				$receita['notas'] ?? '',
 			);
 
@@ -476,40 +486,52 @@ class CSV
 			}
 		}
 
-		// Bruto.
-		$bruto_key = $this->find_header_key($mapped, array('bruto', 'gross'));
-		if ($bruto_key && ! empty($mapped[$bruto_key])) {
-			$normalized_value = $this->normalize_number_import($mapped[$bruto_key]);
-			if ($normalized_value !== null && $normalized_value >= 0) {
-				$data['bruto'] = $normalized_value;
-			}
+		// Canal.
+		$canal_key = $this->find_header_key($mapped, array('canal', 'channel'));
+		if ($canal_key && ! empty($mapped[$canal_key])) {
+			$data['canal'] = sanitize_text_field($mapped[$canal_key]);
 		}
 
-		// Taxas.
-		$taxas_key = $this->find_header_key($mapped, array('taxas', 'fees', 'tax'));
-		if ($taxas_key && ! empty($mapped[$taxas_key])) {
-			$normalized_value = $this->normalize_number_import($mapped[$taxas_key]);
-			if ($normalized_value !== null && $normalized_value >= 0) {
-				$data['taxas'] = $normalized_value;
-			}
-		}
-
-		// Líquido (calculated if not provided).
+		// Valor (support both new format and old format for backward compatibility).
+		$valor_key = $this->find_header_key($mapped, array('valor', 'value'));
 		$liquido_key = $this->find_header_key($mapped, array('liquido', 'liquido', 'net'));
-		if ($liquido_key && ! empty($mapped[$liquido_key])) {
+		$bruto_key = $this->find_header_key($mapped, array('bruto', 'gross'));
+		$taxas_key = $this->find_header_key($mapped, array('taxas', 'fees', 'tax'));
+
+		if ($valor_key && ! empty($mapped[$valor_key])) {
+			$normalized_value = $this->normalize_number_import($mapped[$valor_key]);
+			if ($normalized_value !== null && $normalized_value >= 0) {
+				$data['valor'] = $normalized_value;
+			}
+		} elseif ($liquido_key && ! empty($mapped[$liquido_key])) {
+			// Backward compatibility: support liquido
 			$normalized_value = $this->normalize_number_import($mapped[$liquido_key]);
 			if ($normalized_value !== null && $normalized_value >= 0) {
-				$data['liquido'] = $normalized_value;
+				$data['valor'] = $normalized_value;
 			}
-		} elseif (isset($data['bruto']) && isset($data['taxas'])) {
-			$data['liquido'] = $data['bruto'] - $data['taxas'];
+		} elseif ($bruto_key && $taxas_key) {
+			// Backward compatibility: calculate from bruto - taxas
+			$bruto_value = $this->normalize_number_import($mapped[$bruto_key] ?? '');
+			$taxas_value = $this->normalize_number_import($mapped[$taxas_key] ?? '');
+			if ($bruto_value !== null && $taxas_value !== null && $bruto_value >= 0 && $taxas_value >= 0) {
+				$data['valor'] = $bruto_value - $taxas_value;
+			}
+		} elseif ($bruto_key && ! empty($mapped[$bruto_key])) {
+			// Backward compatibility: use bruto as valor if no taxas
+			$normalized_value = $this->normalize_number_import($mapped[$bruto_key]);
+			if ($normalized_value !== null && $normalized_value >= 0) {
+				$data['valor'] = $normalized_value;
+			}
 		} else {
-			$errors[] = __('Valor líquido é obrigatório ou bruto e taxas devem ser fornecidos.', 'gestor-financeiro');
+			$errors[] = __('Valor é obrigatório.', 'gestor-financeiro');
 		}
 
-		// Notas.
+		// Descrição/Notas (support both for backward compatibility).
+		$descricao_key = $this->find_header_key($mapped, array('descrição', 'descricao', 'description', 'desc'));
 		$notas_key = $this->find_header_key($mapped, array('notas', 'notes', 'note'));
-		if ($notas_key && ! empty($mapped[$notas_key])) {
+		if ($descricao_key && ! empty($mapped[$descricao_key])) {
+			$data['notas'] = sanitize_textarea_field($mapped[$descricao_key]);
+		} elseif ($notas_key && ! empty($mapped[$notas_key])) {
 			$data['notas'] = sanitize_textarea_field($mapped[$notas_key]);
 		}
 
@@ -721,11 +743,10 @@ class CSV
 	{
 		$headers = array(
 			__('Data', 'gestor-financeiro'),
+			__('Canal', 'gestor-financeiro'),
+			__('Valor', 'gestor-financeiro'),
 			__('Estabelecimento', 'gestor-financeiro'),
-			__('Bruto', 'gestor-financeiro'),
-			__('Taxas', 'gestor-financeiro'),
-			__('Líquido', 'gestor-financeiro'),
-			__('Notas', 'gestor-financeiro'),
+			__('Descrição', 'gestor-financeiro'),
 		);
 
 		$lines = array();
@@ -734,10 +755,9 @@ class CSV
 		// Add example row
 		$example_row = array(
 			date('d/m/Y', strtotime('today')),
-			__('Exemplo Restaurante', 'gestor-financeiro'),
-			'2500.00',
-			'125.00',
+			'Dinheiro',
 			'2375.00',
+			__('Exemplo Restaurante', 'gestor-financeiro'),
 			__('Vendas do dia', 'gestor-financeiro'),
 		);
 		$lines[] = implode(',', array_map(array($this, 'escape_csv_field'), $example_row));

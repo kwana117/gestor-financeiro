@@ -37,6 +37,10 @@ class Migrations {
 		// Always ensure valor_renda column exists (for existing installations).
 		// This is safe to run multiple times as it checks if column exists first.
 		self::add_valor_renda_column();
+		
+		// Always ensure valor column exists in receitas table (for existing installations).
+		// This is safe to run multiple times as it checks if column exists first.
+		self::add_valor_column_to_receitas();
 	}
 
 	/**
@@ -54,10 +58,58 @@ class Migrations {
 			// For existing installations, ensure valor_renda column exists.
 			// This function checks if column exists before adding it.
 			self::add_valor_renda_column();
+			// Also ensure valor column exists in receitas table.
+			self::add_valor_column_to_receitas();
 		}
 
 		// Future migrations can be added here.
 		// Example: if ( version_compare( $from_version, '1.1.0', '<' ) ) { ... }
+	}
+
+	/**
+	 * Add valor column to receitas table.
+	 *
+	 * @return void
+	 */
+	private static function add_valor_column_to_receitas(): void {
+		global $wpdb;
+		$table_name = Tables::get_table_name( 'receitas' );
+
+		// Check if table exists first.
+		$table_exists = $wpdb->get_var(
+			$wpdb->prepare(
+				"SHOW TABLES LIKE %s",
+				$table_name
+			)
+		);
+
+		if ( ! $table_exists ) {
+			return;
+		}
+
+		// Check if column already exists using SHOW COLUMNS (more compatible).
+		$column_exists = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+				WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'valor'",
+				$wpdb->dbname,
+				$table_name
+			)
+		);
+
+		if ( empty( $column_exists ) || 0 === (int) $column_exists ) {
+			$result = $wpdb->query(
+				"ALTER TABLE {$table_name} ADD COLUMN valor decimal(12,2) NOT NULL DEFAULT 0.00 AFTER canal"
+			);
+
+			// If query failed, try alternative method.
+			if ( false === $result ) {
+				// Try using dbDelta approach.
+				require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+				$schema = self::get_receitas_schema();
+				dbDelta( $schema );
+			}
+		}
 	}
 
 	/**
@@ -280,6 +332,7 @@ class Migrations {
 			data date NOT NULL,
 			estabelecimento_id bigint(20) UNSIGNED DEFAULT NULL,
 			canal varchar(50) DEFAULT NULL,
+			valor decimal(12,2) NOT NULL DEFAULT 0.00,
 			bruto decimal(12,2) NOT NULL DEFAULT 0.00,
 			taxas decimal(12,2) NOT NULL DEFAULT 0.00,
 			liquido decimal(12,2) NOT NULL DEFAULT 0.00,
