@@ -96,6 +96,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<button class="gf-tab-button" data-tab="salarios">
 			<?php echo esc_html__( 'Salários', 'gestor-financeiro' ); ?>
 		</button>
+		<button class="gf-tab-button" data-tab="funcionarios">
+			<?php echo esc_html__( 'Funcionários', 'gestor-financeiro' ); ?>
+		</button>
+		<button class="gf-tab-button" data-tab="estabelecimentos">
+			<?php echo esc_html__( 'Estabelecimentos', 'gestor-financeiro' ); ?>
+		</button>
+		<button class="gf-tab-button" data-tab="fornecedores">
+			<?php echo esc_html__( 'Fornecedores', 'gestor-financeiro' ); ?>
+		</button>
 		<button class="gf-tab-button" data-tab="relatorios">
 			<?php echo esc_html__( 'Relatórios', 'gestor-financeiro' ); ?>
 		</button>
@@ -139,12 +148,57 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<button class="gf-button gf-button-primary" data-action="add-receita">
 					<?php echo esc_html__( 'Adicionar Receita', 'gestor-financeiro' ); ?>
 				</button>
+				<button class="gf-button" data-action="toggle-csv-import">
+					<?php echo esc_html__( 'Importar CSV', 'gestor-financeiro' ); ?>
+				</button>
 				<div class="gf-filters">
 					<select id="gf-filter-estabelecimento">
 						<option value=""><?php echo esc_html__( 'Todos os estabelecimentos', 'gestor-financeiro' ); ?></option>
 					</select>
 					<input type="date" id="gf-filter-start-date" placeholder="<?php echo esc_attr__( 'Data início', 'gestor-financeiro' ); ?>">
 					<input type="date" id="gf-filter-end-date" placeholder="<?php echo esc_attr__( 'Data fim', 'gestor-financeiro' ); ?>">
+				</div>
+			</div>
+
+			<div class="gf-csv-import-section" id="gf-csv-import-section" style="display: none;">
+				<h3><?php echo esc_html__( 'Importação CSV', 'gestor-financeiro' ); ?></h3>
+				<p style="margin-bottom: 15px; color: var(--gf-text-secondary);">
+					<?php echo esc_html__( 'Importe dados de despesas ou receitas através de um ficheiro CSV.', 'gestor-financeiro' ); ?>
+					<a href="#" id="gf-download-csv-template" data-type="despesas" style="margin-left: 10px; color: var(--gf-link-color, #2271b1);">
+						<?php echo esc_html__( 'Descarregar modelo Despesas', 'gestor-financeiro' ); ?>
+					</a>
+					<a href="#" id="gf-download-csv-template-receitas" data-type="receitas" style="margin-left: 10px; color: var(--gf-link-color, #2271b1);">
+						<?php echo esc_html__( 'Descarregar modelo Receitas', 'gestor-financeiro' ); ?>
+					</a>
+				</p>
+				<div class="gf-csv-import-form">
+					<div class="gf-form-group">
+						<label>Tipo de Dados</label>
+						<select id="gf-csv-import-type" class="gf-input">
+							<option value="despesas">Despesas</option>
+							<option value="receitas">Receitas</option>
+						</select>
+					</div>
+					<div class="gf-form-group">
+						<label>Conteúdo CSV</label>
+						<textarea id="gf-csv-import-content" class="gf-input" rows="10" placeholder="<?php echo esc_attr__( 'Cole aqui o conteúdo do ficheiro CSV ou faça upload do ficheiro...', 'gestor-financeiro' ); ?>"></textarea>
+						<input type="file" id="gf-csv-import-file" accept=".csv" style="margin-top: 10px;">
+					</div>
+					<div class="gf-form-group">
+						<button class="gf-button gf-button-primary" data-action="preview-csv-import">
+							<?php echo esc_html__( 'Pré-visualizar Importação', 'gestor-financeiro' ); ?>
+						</button>
+					</div>
+				</div>
+				<div id="gf-csv-import-preview" style="display: none;">
+					<h4><?php echo esc_html__( 'Pré-visualização', 'gestor-financeiro' ); ?></h4>
+					<div id="gf-csv-import-preview-content"></div>
+					<div id="gf-csv-import-errors" style="margin-top: 15px;"></div>
+					<div style="margin-top: 15px;">
+						<button class="gf-button gf-button-primary" data-action="execute-csv-import" style="display: none;">
+							<?php echo esc_html__( 'Executar Importação', 'gestor-financeiro' ); ?>
+						</button>
+					</div>
 				</div>
 			</div>
 
@@ -173,6 +227,45 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<div class="gf-salarios-list" data-tipo="diario">
 					<div class="gf-loading"><?php echo esc_html__( 'A carregar...', 'gestor-financeiro' ); ?></div>
 				</div>
+			</div>
+		</div>
+
+		<!-- Tab: Funcionários -->
+		<div class="gf-tab-content" data-tab-content="funcionarios">
+			<div class="gf-section-header">
+				<h3><?php echo esc_html__( 'Funcionários', 'gestor-financeiro' ); ?></h3>
+				<button class="gf-button gf-button-primary" data-action="add-funcionario">
+					<?php echo esc_html__( 'Adicionar Funcionário', 'gestor-financeiro' ); ?>
+				</button>
+			</div>
+			<div class="gf-funcionarios-list">
+				<div class="gf-loading"><?php echo esc_html__( 'A carregar...', 'gestor-financeiro' ); ?></div>
+			</div>
+		</div>
+
+		<!-- Tab: Estabelecimentos -->
+		<div class="gf-tab-content" data-tab-content="estabelecimentos">
+			<div class="gf-section-header">
+				<h3><?php echo esc_html__( 'Estabelecimentos', 'gestor-financeiro' ); ?></h3>
+				<button class="gf-button gf-button-primary" data-action="add-estabelecimento">
+					<?php echo esc_html__( 'Adicionar Estabelecimento', 'gestor-financeiro' ); ?>
+				</button>
+			</div>
+			<div class="gf-estabelecimentos-list">
+				<div class="gf-loading"><?php echo esc_html__( 'A carregar...', 'gestor-financeiro' ); ?></div>
+			</div>
+		</div>
+
+		<!-- Tab: Fornecedores -->
+		<div class="gf-tab-content" data-tab-content="fornecedores">
+			<div class="gf-section-header">
+				<h3><?php echo esc_html__( 'Fornecedores', 'gestor-financeiro' ); ?></h3>
+				<button class="gf-button gf-button-primary" data-action="add-fornecedor">
+					<?php echo esc_html__( 'Adicionar Fornecedor', 'gestor-financeiro' ); ?>
+				</button>
+			</div>
+			<div class="gf-fornecedores-list">
+				<div class="gf-loading"><?php echo esc_html__( 'A carregar...', 'gestor-financeiro' ); ?></div>
 			</div>
 		</div>
 
@@ -302,6 +395,36 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<span class="gf-modal-close">&times;</span>
 			<h2><?php echo esc_html__( 'Adicionar/Editar Receita', 'gestor-financeiro' ); ?></h2>
 			<form id="gf-form-receita" class="gf-form">
+				<!-- Form fields will be populated by JavaScript -->
+			</form>
+		</div>
+	</div>
+
+	<div class="gf-modal" id="gf-modal-estabelecimento" style="display: none;">
+		<div class="gf-modal-content">
+			<span class="gf-modal-close">&times;</span>
+			<h2><?php echo esc_html__( 'Adicionar/Editar Estabelecimento', 'gestor-financeiro' ); ?></h2>
+			<form id="gf-form-estabelecimento" class="gf-form">
+				<!-- Form fields will be populated by JavaScript -->
+			</form>
+		</div>
+	</div>
+
+	<div class="gf-modal" id="gf-modal-fornecedor" style="display: none;">
+		<div class="gf-modal-content">
+			<span class="gf-modal-close">&times;</span>
+			<h2><?php echo esc_html__( 'Adicionar/Editar Fornecedor', 'gestor-financeiro' ); ?></h2>
+			<form id="gf-form-fornecedor" class="gf-form">
+				<!-- Form fields will be populated by JavaScript -->
+			</form>
+		</div>
+	</div>
+
+	<div class="gf-modal" id="gf-modal-funcionario" style="display: none;">
+		<div class="gf-modal-content">
+			<span class="gf-modal-close">&times;</span>
+			<h2><?php echo esc_html__( 'Adicionar/Editar Funcionário', 'gestor-financeiro' ); ?></h2>
+			<form id="gf-form-funcionario" class="gf-form">
 				<!-- Form fields will be populated by JavaScript -->
 			</form>
 		</div>

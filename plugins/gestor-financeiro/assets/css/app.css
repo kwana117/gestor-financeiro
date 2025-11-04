@@ -525,6 +525,29 @@ html[data-gf-app] {
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
+/* Section Header */
+.gf-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.gf-section-header h3 {
+  margin: 0;
+}
+
+/* Estabelecimentos, Fornecedores and Funcionários Lists */
+.gf-estabelecimentos-list,
+.gf-fornecedores-list,
+.gf-funcionarios-list {
+  background: var(--gf-card-bg);
+  border: 1px solid var(--gf-border-color);
+  border-radius: 8px;
+  padding: 20px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
 /* Reports */
 .gf-relatorios-controls {
   display: flex;
@@ -540,6 +563,61 @@ html[data-gf-app] {
   padding: 20px;
   min-height: 200px;
   transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Links */
+a {
+  color: var(--gf-link-color, #2271b1);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.dark-mode a {
+  color: var(--gf-link-color, #72aee6);
+}
+
+/* CSV Import Section */
+.gf-csv-import-section {
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--gf-card-bg);
+  border: 1px solid var(--gf-border-color);
+  border-radius: 8px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.gf-csv-import-section h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.gf-csv-import-form {
+  background: var(--gf-card-bg);
+  border: 1px solid var(--gf-border-color);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+#gf-csv-import-preview {
+  background: var(--gf-card-bg);
+  border: 1px solid var(--gf-border-color);
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 20px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+#gf-csv-import-preview h4 {
+  margin-top: 0;
+}
+
+#gf-csv-import-errors {
+  margin-top: 15px;
 }
 
 /* Tables */

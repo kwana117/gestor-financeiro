@@ -371,7 +371,8 @@ function gestor_financeiro_seed_data(): void {
 }
 
 // Run seed data on admin init (only in admin area).
-if ( is_admin() ) {
-	add_action( 'admin_init', 'gestor_financeiro_seed_data', 20 );
-}
+// DESATIVADO: Não criar dados dummy automaticamente
+// if ( is_admin() ) {
+//	add_action( 'admin_init', 'gestor_financeiro_seed_data', 20 );
+// }
 
