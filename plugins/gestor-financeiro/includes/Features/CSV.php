@@ -1,4 +1,5 @@
 <?php
+
 /**
  * CSV import/export system.
  *
@@ -18,7 +19,8 @@ use GestorFinanceiro\Helpers;
 /**
  * Handle CSV import and export operations.
  */
-class CSV {
+class CSV
+{
 
 	/**
 	 * Batch size for import operations.
@@ -34,23 +36,24 @@ class CSV {
 	 * @param int|null $estabelecimento_id Optional establishment ID.
 	 * @return string CSV content.
 	 */
-	public function export( string $type, ?string $start_date = null, ?string $end_date = null, ?int $estabelecimento_id = null ): string {
-		if ( ! in_array( $type, array( 'despesas', 'receitas' ), true ) ) {
+	public function export(string $type, ?string $start_date = null, ?string $end_date = null, ?int $estabelecimento_id = null): string
+	{
+		if (! in_array($type, array('despesas', 'receitas'), true)) {
 			return '';
 		}
 
 		// Default to last 3 months if no dates provided.
-		if ( ! $start_date ) {
-			$start_date = date( 'Y-m-d', strtotime( '-3 months' ) );
+		if (! $start_date) {
+			$start_date = date('Y-m-d', strtotime('-3 months'));
 		}
-		if ( ! $end_date ) {
-			$end_date = current_time( 'Y-m-d' );
+		if (! $end_date) {
+			$end_date = current_time('Y-m-d');
 		}
 
-		if ( 'despesas' === $type ) {
-			return $this->export_despesas( $start_date, $end_date, $estabelecimento_id );
+		if ('despesas' === $type) {
+			return $this->export_despesas($start_date, $end_date, $estabelecimento_id);
 		} else {
-			return $this->export_receitas( $start_date, $end_date, $estabelecimento_id );
+			return $this->export_receitas($start_date, $end_date, $estabelecimento_id);
 		}
 	}
 
@@ -62,57 +65,58 @@ class CSV {
 	 * @param int|null $estabelecimento_id Optional establishment ID.
 	 * @return string CSV content.
 	 */
-	private function export_despesas( string $start_date, string $end_date, ?int $estabelecimento_id = null ): string {
+	private function export_despesas(string $start_date, string $end_date, ?int $estabelecimento_id = null): string
+	{
 		$repo = new DespesasRepository();
 		$estabelecimentos_repo = new EstabelecimentosRepository();
 
 		// Get expenses in date range.
-		$despesas = $repo->findByDateRange( $start_date, $end_date, $estabelecimento_id );
+		$despesas = $repo->findByDateRange($start_date, $end_date, $estabelecimento_id);
 
 		// Build CSV headers.
 		$headers = array(
-			__( 'Data', 'gestor-financeiro' ),
-			__( 'Estabelecimento', 'gestor-financeiro' ),
-			__( 'Fornecedor', 'gestor-financeiro' ),
-			__( 'Funcionário', 'gestor-financeiro' ),
-			__( 'Tipo', 'gestor-financeiro' ),
-			__( 'Descrição', 'gestor-financeiro' ),
-			__( 'Valor', 'gestor-financeiro' ),
-			__( 'Vencimento', 'gestor-financeiro' ),
-			__( 'Pago', 'gestor-financeiro' ),
-			__( 'Pago em', 'gestor-financeiro' ),
-			__( 'Notas', 'gestor-financeiro' ),
+			__('Data', 'gestor-financeiro'),
+			__('Estabelecimento', 'gestor-financeiro'),
+			__('Fornecedor', 'gestor-financeiro'),
+			__('Funcionário', 'gestor-financeiro'),
+			__('Tipo', 'gestor-financeiro'),
+			__('Descrição', 'gestor-financeiro'),
+			__('Valor', 'gestor-financeiro'),
+			__('Vencimento', 'gestor-financeiro'),
+			__('Pago', 'gestor-financeiro'),
+			__('Pago em', 'gestor-financeiro'),
+			__('Notas', 'gestor-financeiro'),
 		);
 
 		$lines = array();
-		$lines[] = implode( ';', $headers );
+		$lines[] = implode(';', $headers);
 
 		// Build CSV rows.
-		foreach ( $despesas as $despesa ) {
+		foreach ($despesas as $despesa) {
 			$estabelecimento = null;
-			if ( ! empty( $despesa['estabelecimento_id'] ) ) {
-				$estabelecimento = $estabelecimentos_repo->find( (int) $despesa['estabelecimento_id'] );
+			if (! empty($despesa['estabelecimento_id'])) {
+				$estabelecimento = $estabelecimentos_repo->find((int) $despesa['estabelecimento_id']);
 			}
 
 			$row = array(
-				$this->normalize_date_export( $despesa['data'] ?? '' ),
+				$this->normalize_date_export($despesa['data'] ?? ''),
 				$estabelecimento ? $estabelecimento['nome'] : '',
 				'', // Fornecedor name would need join.
 				'', // Funcionário name would need join.
 				$despesa['tipo'] ?? '',
 				$despesa['descricao'] ?? '',
-				$this->normalize_number_export( (float) ( $despesa['valor'] ?? 0 ) ),
-				$this->normalize_date_export( $despesa['vencimento'] ?? '' ),
-				( isset( $despesa['pago'] ) && $despesa['pago'] == 1 ) ? __( 'Sim', 'gestor-financeiro' ) : __( 'Não', 'gestor-financeiro' ),
-				$this->normalize_date_export( $despesa['pago_em'] ?? '' ),
+				$this->normalize_number_export((float) ($despesa['valor'] ?? 0)),
+				$this->normalize_date_export($despesa['vencimento'] ?? ''),
+				(isset($despesa['pago']) && $despesa['pago'] == 1) ? __('Sim', 'gestor-financeiro') : __('Não', 'gestor-financeiro'),
+				$this->normalize_date_export($despesa['pago_em'] ?? ''),
 				$despesa['notas'] ?? '',
 			);
 
-			$lines[] = implode( ';', array_map( array( $this, 'escape_csv_field' ), $row ) );
+			$lines[] = implode(';', array_map(array($this, 'escape_csv_field'), $row));
 		}
 
 		// Convert to CSV with UTF-8 BOM for Excel.
-		$csv = "\xEF\xBB\xBF" . implode( "\n", $lines );
+		$csv = "\xEF\xBB\xBF" . implode("\n", $lines);
 
 		return $csv;
 	}
@@ -125,47 +129,48 @@ class CSV {
 	 * @param int|null $estabelecimento_id Optional establishment ID.
 	 * @return string CSV content.
 	 */
-	private function export_receitas( string $start_date, string $end_date, ?int $estabelecimento_id = null ): string {
+	private function export_receitas(string $start_date, string $end_date, ?int $estabelecimento_id = null): string
+	{
 		$repo = new ReceitasRepository();
 		$estabelecimentos_repo = new EstabelecimentosRepository();
 
 		// Get revenue in date range.
-		$receitas = $repo->findByDateRange( $start_date, $end_date, $estabelecimento_id );
+		$receitas = $repo->findByDateRange($start_date, $end_date, $estabelecimento_id);
 
 		// Build CSV headers.
 		$headers = array(
-			__( 'Data', 'gestor-financeiro' ),
-			__( 'Estabelecimento', 'gestor-financeiro' ),
-			__( 'Bruto', 'gestor-financeiro' ),
-			__( 'Taxas', 'gestor-financeiro' ),
-			__( 'Líquido', 'gestor-financeiro' ),
-			__( 'Notas', 'gestor-financeiro' ),
+			__('Data', 'gestor-financeiro'),
+			__('Estabelecimento', 'gestor-financeiro'),
+			__('Bruto', 'gestor-financeiro'),
+			__('Taxas', 'gestor-financeiro'),
+			__('Líquido', 'gestor-financeiro'),
+			__('Notas', 'gestor-financeiro'),
 		);
 
 		$lines = array();
-		$lines[] = implode( ';', $headers );
+		$lines[] = implode(';', $headers);
 
 		// Build CSV rows.
-		foreach ( $receitas as $receita ) {
+		foreach ($receitas as $receita) {
 			$estabelecimento = null;
-			if ( ! empty( $receita['estabelecimento_id'] ) ) {
-				$estabelecimento = $estabelecimentos_repo->find( (int) $receita['estabelecimento_id'] );
+			if (! empty($receita['estabelecimento_id'])) {
+				$estabelecimento = $estabelecimentos_repo->find((int) $receita['estabelecimento_id']);
 			}
 
 			$row = array(
-				$this->normalize_date_export( $receita['data'] ?? '' ),
+				$this->normalize_date_export($receita['data'] ?? ''),
 				$estabelecimento ? $estabelecimento['nome'] : '',
-				$this->normalize_number_export( (float) ( $receita['bruto'] ?? 0 ) ),
-				$this->normalize_number_export( (float) ( $receita['taxas'] ?? 0 ) ),
-				$this->normalize_number_export( (float) ( $receita['liquido'] ?? 0 ) ),
+				$this->normalize_number_export((float) ($receita['bruto'] ?? 0)),
+				$this->normalize_number_export((float) ($receita['taxas'] ?? 0)),
+				$this->normalize_number_export((float) ($receita['liquido'] ?? 0)),
 				$receita['notas'] ?? '',
 			);
 
-			$lines[] = implode( ';', array_map( array( $this, 'escape_csv_field' ), $row ) );
+			$lines[] = implode(';', array_map(array($this, 'escape_csv_field'), $row));
 		}
 
 		// Convert to CSV with UTF-8 BOM for Excel.
-		$csv = "\xEF\xBB\xBF" . implode( "\n", $lines );
+		$csv = "\xEF\xBB\xBF" . implode("\n", $lines);
 
 		return $csv;
 	}
@@ -177,11 +182,12 @@ class CSV {
 	 * @param string $type 'despesas' or 'receitas'.
 	 * @return array<string, mixed> Result with preview, validation errors, and imported count.
 	 */
-	public function import( string $csv_content, string $type ): array {
-		if ( ! in_array( $type, array( 'despesas', 'receitas' ), true ) ) {
+	public function import(string $csv_content, string $type): array
+	{
+		if (! in_array($type, array('despesas', 'receitas'), true)) {
 			return array(
 				'success' => false,
-				'error' => __( 'Tipo inválido. Use "despesas" ou "receitas".', 'gestor-financeiro' ),
+				'error' => __('Tipo inválido. Use "despesas" ou "receitas".', 'gestor-financeiro'),
 				'preview' => array(),
 				'errors' => array(),
 				'imported' => 0,
@@ -189,11 +195,11 @@ class CSV {
 		}
 
 		// Parse CSV.
-		$rows = $this->parse_csv( $csv_content );
-		if ( empty( $rows ) ) {
+		$rows = $this->parse_csv($csv_content);
+		if (empty($rows)) {
 			return array(
 				'success' => false,
-				'error' => __( 'CSV vazio ou inválido.', 'gestor-financeiro' ),
+				'error' => __('CSV vazio ou inválido.', 'gestor-financeiro'),
 				'preview' => array(),
 				'errors' => array(),
 				'imported' => 0,
@@ -201,26 +207,26 @@ class CSV {
 		}
 
 		// Remove header row.
-		$header = array_shift( $rows );
+		$header = array_shift($rows);
 
 		// Validate and parse rows.
 		$preview = array();
 		$errors = array();
 
-		foreach ( $rows as $row_index => $row ) {
+		foreach ($rows as $row_index => $row) {
 			$line_number = $row_index + 2; // +2 because header is line 1 and array is 0-based.
 
-			if ( 'despesas' === $type ) {
-				$parsed = $this->parse_despesa_row( $row, $header, $line_number );
+			if ('despesas' === $type) {
+				$parsed = $this->parse_despesa_row($row, $header, $line_number);
 			} else {
-				$parsed = $this->parse_receita_row( $row, $header, $line_number );
+				$parsed = $this->parse_receita_row($row, $header, $line_number);
 			}
 
-			if ( ! empty( $parsed['errors'] ) ) {
-				$errors[ $line_number ] = $parsed['errors'];
+			if (! empty($parsed['errors'])) {
+				$errors[$line_number] = $parsed['errors'];
 			}
 
-			if ( ! empty( $parsed['data'] ) ) {
+			if (! empty($parsed['data'])) {
 				$preview[] = $parsed['data'];
 			}
 		}
@@ -240,11 +246,12 @@ class CSV {
 	 * @param string $type 'despesas' or 'receitas'.
 	 * @return array<string, mixed> Result with imported count and errors.
 	 */
-	public function execute_import( array $preview_data, string $type ): array {
-		if ( ! in_array( $type, array( 'despesas', 'receitas' ), true ) ) {
+	public function execute_import(array $preview_data, string $type): array
+	{
+		if (! in_array($type, array('despesas', 'receitas'), true)) {
 			return array(
 				'success' => false,
-				'error' => __( 'Tipo inválido.', 'gestor-financeiro' ),
+				'error' => __('Tipo inválido.', 'gestor-financeiro'),
 				'imported' => 0,
 				'errors' => array(),
 			);
@@ -255,23 +262,23 @@ class CSV {
 		$errors = array();
 
 		// Process in batches.
-		$batches = array_chunk( $preview_data, self::BATCH_SIZE );
+		$batches = array_chunk($preview_data, self::BATCH_SIZE);
 
-		foreach ( $batches as $batch_index => $batch ) {
-			foreach ( $batch as $row_index => $row ) {
+		foreach ($batches as $batch_index => $batch) {
+			foreach ($batch as $row_index => $row) {
 				try {
-					$id = $repo->create( $row );
-					if ( false !== $id ) {
+					$id = $repo->create($row);
+					if (false !== $id) {
 						$imported++;
 					} else {
 						$errors[] = array(
-							'row' => ( $batch_index * self::BATCH_SIZE ) + $row_index + 1,
-							'error' => __( 'Erro ao inserir registo.', 'gestor-financeiro' ),
+							'row' => ($batch_index * self::BATCH_SIZE) + $row_index + 1,
+							'error' => __('Erro ao inserir registo.', 'gestor-financeiro'),
 						);
 					}
-				} catch ( \Exception $e ) {
+				} catch (\Exception $e) {
 					$errors[] = array(
-						'row' => ( $batch_index * self::BATCH_SIZE ) + $row_index + 1,
+						'row' => ($batch_index * self::BATCH_SIZE) + $row_index + 1,
 						'error' => $e->getMessage(),
 					);
 				}
@@ -291,36 +298,37 @@ class CSV {
 	 * @param string $csv_content CSV content.
 	 * @return array<array<string>> Parsed rows.
 	 */
-	private function parse_csv( string $csv_content ): array {
+	private function parse_csv(string $csv_content): array
+	{
 		// Remove UTF-8 BOM if present.
-		if ( strpos( $csv_content, "\xEF\xBB\xBF" ) === 0 ) {
-			$csv_content = substr( $csv_content, 3 );
+		if (strpos($csv_content, "\xEF\xBB\xBF") === 0) {
+			$csv_content = substr($csv_content, 3);
 		}
 
-		$lines = explode( "\n", $csv_content );
+		$lines = explode("\n", $csv_content);
 		$rows = array();
 
 		// Detect separator from first line (comma or semicolon)
 		$separator = ',';
-		if ( ! empty( $lines ) ) {
-			$first_line = trim( $lines[0] );
+		if (! empty($lines)) {
+			$first_line = trim($lines[0]);
 			// If first line has more semicolons than commas, use semicolon
-			$semicolon_count = substr_count( $first_line, ';' );
-			$comma_count = substr_count( $first_line, ',' );
-			if ( $semicolon_count > $comma_count ) {
+			$semicolon_count = substr_count($first_line, ';');
+			$comma_count = substr_count($first_line, ',');
+			if ($semicolon_count > $comma_count) {
 				$separator = ';';
 			}
 		}
 
-		foreach ( $lines as $line ) {
-			$line = trim( $line );
-			if ( empty( $line ) ) {
+		foreach ($lines as $line) {
+			$line = trim($line);
+			if (empty($line)) {
 				continue;
 			}
 
 			// Parse CSV line with detected separator (comma is standard, but support semicolon for backwards compatibility).
-			$fields = str_getcsv( $line, $separator );
-			if ( ! empty( $fields ) ) {
+			$fields = str_getcsv($line, $separator);
+			if (! empty($fields)) {
 				$rows[] = $fields;
 			}
 		}
@@ -336,85 +344,86 @@ class CSV {
 	 * @param int $line_number Line number for error reporting.
 	 * @return array<string, mixed> Parsed data with errors.
 	 */
-	private function parse_despesa_row( array $row, array $header, int $line_number ): array {
+	private function parse_despesa_row(array $row, array $header, int $line_number): array
+	{
 		$data = array();
 		$errors = array();
 		$estabelecimentos_repo = new EstabelecimentosRepository();
 
 		// Map header to row.
 		$mapped = array();
-		foreach ( $header as $index => $header_name ) {
-			$mapped[ strtolower( trim( $header_name ) ) ] = isset( $row[ $index ] ) ? trim( $row[ $index ] ) : '';
+		foreach ($header as $index => $header_name) {
+			$mapped[strtolower(trim($header_name))] = isset($row[$index]) ? trim($row[$index]) : '';
 		}
 
 		// Parse required fields.
-		$date_key = $this->find_header_key( $mapped, array( 'data', 'date' ) );
-		if ( $date_key && ! empty( $mapped[ $date_key ] ) ) {
-			$normalized_date = $this->normalize_date_import( $mapped[ $date_key ] );
-			if ( $normalized_date ) {
+		$date_key = $this->find_header_key($mapped, array('data', 'date'));
+		if ($date_key && ! empty($mapped[$date_key])) {
+			$normalized_date = $this->normalize_date_import($mapped[$date_key]);
+			if ($normalized_date) {
 				$data['data'] = $normalized_date;
 			} else {
-				$errors[] = sprintf( __( 'Data inválida: %s', 'gestor-financeiro' ), $mapped[ $date_key ] );
+				$errors[] = sprintf(__('Data inválida: %s', 'gestor-financeiro'), $mapped[$date_key]);
 			}
 		} else {
-			$errors[] = __( 'Data é obrigatória.', 'gestor-financeiro' );
+			$errors[] = __('Data é obrigatória.', 'gestor-financeiro');
 		}
 
 		// Estabelecimento.
-		$estabelecimento_key = $this->find_header_key( $mapped, array( 'estabelecimento', 'establishment' ) );
-		if ( $estabelecimento_key && ! empty( $mapped[ $estabelecimento_key ] ) ) {
-			$estabelecimento = $estabelecimentos_repo->findByName( $mapped[ $estabelecimento_key ] );
-			if ( $estabelecimento ) {
+		$estabelecimento_key = $this->find_header_key($mapped, array('estabelecimento', 'establishment'));
+		if ($estabelecimento_key && ! empty($mapped[$estabelecimento_key])) {
+			$estabelecimento = $estabelecimentos_repo->findByName($mapped[$estabelecimento_key]);
+			if ($estabelecimento) {
 				$data['estabelecimento_id'] = (int) $estabelecimento['id'];
 			} else {
-				$errors[] = sprintf( __( 'Estabelecimento não encontrado: %s', 'gestor-financeiro' ), $mapped[ $estabelecimento_key ] );
+				$errors[] = sprintf(__('Estabelecimento não encontrado: %s', 'gestor-financeiro'), $mapped[$estabelecimento_key]);
 			}
 		}
 
 		// Valor.
-		$valor_key = $this->find_header_key( $mapped, array( 'valor', 'value', 'amount' ) );
-		if ( $valor_key && ! empty( $mapped[ $valor_key ] ) ) {
-			$normalized_value = $this->normalize_number_import( $mapped[ $valor_key ] );
-			if ( $normalized_value !== null && $normalized_value > 0 ) {
+		$valor_key = $this->find_header_key($mapped, array('valor', 'value', 'amount'));
+		if ($valor_key && ! empty($mapped[$valor_key])) {
+			$normalized_value = $this->normalize_number_import($mapped[$valor_key]);
+			if ($normalized_value !== null && $normalized_value > 0) {
 				$data['valor'] = $normalized_value;
 			} else {
-				$errors[] = sprintf( __( 'Valor inválido: %s', 'gestor-financeiro' ), $mapped[ $valor_key ] );
+				$errors[] = sprintf(__('Valor inválido: %s', 'gestor-financeiro'), $mapped[$valor_key]);
 			}
 		} else {
-			$errors[] = __( 'Valor é obrigatório.', 'gestor-financeiro' );
+			$errors[] = __('Valor é obrigatório.', 'gestor-financeiro');
 		}
 
 		// Optional fields.
-		$tipo_key = $this->find_header_key( $mapped, array( 'tipo', 'type' ) );
-		if ( $tipo_key && ! empty( $mapped[ $tipo_key ] ) ) {
-			$data['tipo'] = sanitize_text_field( $mapped[ $tipo_key ] );
+		$tipo_key = $this->find_header_key($mapped, array('tipo', 'type'));
+		if ($tipo_key && ! empty($mapped[$tipo_key])) {
+			$data['tipo'] = sanitize_text_field($mapped[$tipo_key]);
 		}
 
-		$descricao_key = $this->find_header_key( $mapped, array( 'descrição', 'descricao', 'description', 'desc' ) );
-		if ( $descricao_key && ! empty( $mapped[ $descricao_key ] ) ) {
-			$data['descricao'] = sanitize_text_field( $mapped[ $descricao_key ] );
+		$descricao_key = $this->find_header_key($mapped, array('descrição', 'descricao', 'description', 'desc'));
+		if ($descricao_key && ! empty($mapped[$descricao_key])) {
+			$data['descricao'] = sanitize_text_field($mapped[$descricao_key]);
 		}
 
-		$vencimento_key = $this->find_header_key( $mapped, array( 'vencimento', 'due date', 'due' ) );
-		if ( $vencimento_key && ! empty( $mapped[ $vencimento_key ] ) ) {
-			$normalized_date = $this->normalize_date_import( $mapped[ $vencimento_key ] );
-			if ( $normalized_date ) {
+		$vencimento_key = $this->find_header_key($mapped, array('vencimento', 'due date', 'due'));
+		if ($vencimento_key && ! empty($mapped[$vencimento_key])) {
+			$normalized_date = $this->normalize_date_import($mapped[$vencimento_key]);
+			if ($normalized_date) {
 				$data['vencimento'] = $normalized_date;
 			}
 		}
 
-		$pago_key = $this->find_header_key( $mapped, array( 'pago', 'paid' ) );
-		if ( $pago_key && ! empty( $mapped[ $pago_key ] ) ) {
-			$pago_value = strtolower( trim( $mapped[ $pago_key ] ) );
-			$data['pago'] = in_array( $pago_value, array( 'sim', 'yes', 's', 'y', '1', 'true' ), true ) ? 1 : 0;
-			if ( $data['pago'] == 1 ) {
-				$data['pago_em'] = current_time( 'mysql' );
+		$pago_key = $this->find_header_key($mapped, array('pago', 'paid'));
+		if ($pago_key && ! empty($mapped[$pago_key])) {
+			$pago_value = strtolower(trim($mapped[$pago_key]));
+			$data['pago'] = in_array($pago_value, array('sim', 'yes', 's', 'y', '1', 'true'), true) ? 1 : 0;
+			if ($data['pago'] == 1) {
+				$data['pago_em'] = current_time('mysql');
 			}
 		}
 
-		$notas_key = $this->find_header_key( $mapped, array( 'notas', 'notes', 'note' ) );
-		if ( $notas_key && ! empty( $mapped[ $notas_key ] ) ) {
-			$data['notas'] = sanitize_textarea_field( $mapped[ $notas_key ] );
+		$notas_key = $this->find_header_key($mapped, array('notas', 'notes', 'note'));
+		if ($notas_key && ! empty($mapped[$notas_key])) {
+			$data['notas'] = sanitize_textarea_field($mapped[$notas_key]);
 		}
 
 		return array(
@@ -431,76 +440,77 @@ class CSV {
 	 * @param int $line_number Line number for error reporting.
 	 * @return array<string, mixed> Parsed data with errors.
 	 */
-	private function parse_receita_row( array $row, array $header, int $line_number ): array {
+	private function parse_receita_row(array $row, array $header, int $line_number): array
+	{
 		$data = array();
 		$errors = array();
 		$estabelecimentos_repo = new EstabelecimentosRepository();
 
 		// Map header to row.
 		$mapped = array();
-		foreach ( $header as $index => $header_name ) {
-			$mapped[ strtolower( trim( $header_name ) ) ] = isset( $row[ $index ] ) ? trim( $row[ $index ] ) : '';
+		foreach ($header as $index => $header_name) {
+			$mapped[strtolower(trim($header_name))] = isset($row[$index]) ? trim($row[$index]) : '';
 		}
 
 		// Parse required fields.
-		$date_key = $this->find_header_key( $mapped, array( 'data', 'date' ) );
-		if ( $date_key && ! empty( $mapped[ $date_key ] ) ) {
-			$normalized_date = $this->normalize_date_import( $mapped[ $date_key ] );
-			if ( $normalized_date ) {
+		$date_key = $this->find_header_key($mapped, array('data', 'date'));
+		if ($date_key && ! empty($mapped[$date_key])) {
+			$normalized_date = $this->normalize_date_import($mapped[$date_key]);
+			if ($normalized_date) {
 				$data['data'] = $normalized_date;
 			} else {
-				$errors[] = sprintf( __( 'Data inválida: %s', 'gestor-financeiro' ), $mapped[ $date_key ] );
+				$errors[] = sprintf(__('Data inválida: %s', 'gestor-financeiro'), $mapped[$date_key]);
 			}
 		} else {
-			$errors[] = __( 'Data é obrigatória.', 'gestor-financeiro' );
+			$errors[] = __('Data é obrigatória.', 'gestor-financeiro');
 		}
 
 		// Estabelecimento.
-		$estabelecimento_key = $this->find_header_key( $mapped, array( 'estabelecimento', 'establishment' ) );
-		if ( $estabelecimento_key && ! empty( $mapped[ $estabelecimento_key ] ) ) {
-			$estabelecimento = $estabelecimentos_repo->findByName( $mapped[ $estabelecimento_key ] );
-			if ( $estabelecimento ) {
+		$estabelecimento_key = $this->find_header_key($mapped, array('estabelecimento', 'establishment'));
+		if ($estabelecimento_key && ! empty($mapped[$estabelecimento_key])) {
+			$estabelecimento = $estabelecimentos_repo->findByName($mapped[$estabelecimento_key]);
+			if ($estabelecimento) {
 				$data['estabelecimento_id'] = (int) $estabelecimento['id'];
 			} else {
-				$errors[] = sprintf( __( 'Estabelecimento não encontrado: %s', 'gestor-financeiro' ), $mapped[ $estabelecimento_key ] );
+				$errors[] = sprintf(__('Estabelecimento não encontrado: %s', 'gestor-financeiro'), $mapped[$estabelecimento_key]);
 			}
 		}
 
 		// Bruto.
-		$bruto_key = $this->find_header_key( $mapped, array( 'bruto', 'gross' ) );
-		if ( $bruto_key && ! empty( $mapped[ $bruto_key ] ) ) {
-			$normalized_value = $this->normalize_number_import( $mapped[ $bruto_key ] );
-			if ( $normalized_value !== null && $normalized_value >= 0 ) {
+		$bruto_key = $this->find_header_key($mapped, array('bruto', 'gross'));
+		if ($bruto_key && ! empty($mapped[$bruto_key])) {
+			$normalized_value = $this->normalize_number_import($mapped[$bruto_key]);
+			if ($normalized_value !== null && $normalized_value >= 0) {
 				$data['bruto'] = $normalized_value;
 			}
 		}
 
 		// Taxas.
-		$taxas_key = $this->find_header_key( $mapped, array( 'taxas', 'fees', 'tax' ) );
-		if ( $taxas_key && ! empty( $mapped[ $taxas_key ] ) ) {
-			$normalized_value = $this->normalize_number_import( $mapped[ $taxas_key ] );
-			if ( $normalized_value !== null && $normalized_value >= 0 ) {
+		$taxas_key = $this->find_header_key($mapped, array('taxas', 'fees', 'tax'));
+		if ($taxas_key && ! empty($mapped[$taxas_key])) {
+			$normalized_value = $this->normalize_number_import($mapped[$taxas_key]);
+			if ($normalized_value !== null && $normalized_value >= 0) {
 				$data['taxas'] = $normalized_value;
 			}
 		}
 
 		// Líquido (calculated if not provided).
-		$liquido_key = $this->find_header_key( $mapped, array( 'liquido', 'liquido', 'net' ) );
-		if ( $liquido_key && ! empty( $mapped[ $liquido_key ] ) ) {
-			$normalized_value = $this->normalize_number_import( $mapped[ $liquido_key ] );
-			if ( $normalized_value !== null && $normalized_value >= 0 ) {
+		$liquido_key = $this->find_header_key($mapped, array('liquido', 'liquido', 'net'));
+		if ($liquido_key && ! empty($mapped[$liquido_key])) {
+			$normalized_value = $this->normalize_number_import($mapped[$liquido_key]);
+			if ($normalized_value !== null && $normalized_value >= 0) {
 				$data['liquido'] = $normalized_value;
 			}
-		} elseif ( isset( $data['bruto'] ) && isset( $data['taxas'] ) ) {
+		} elseif (isset($data['bruto']) && isset($data['taxas'])) {
 			$data['liquido'] = $data['bruto'] - $data['taxas'];
 		} else {
-			$errors[] = __( 'Valor líquido é obrigatório ou bruto e taxas devem ser fornecidos.', 'gestor-financeiro' );
+			$errors[] = __('Valor líquido é obrigatório ou bruto e taxas devem ser fornecidos.', 'gestor-financeiro');
 		}
 
 		// Notas.
-		$notas_key = $this->find_header_key( $mapped, array( 'notas', 'notes', 'note' ) );
-		if ( $notas_key && ! empty( $mapped[ $notas_key ] ) ) {
-			$data['notas'] = sanitize_textarea_field( $mapped[ $notas_key ] );
+		$notas_key = $this->find_header_key($mapped, array('notas', 'notes', 'note'));
+		if ($notas_key && ! empty($mapped[$notas_key])) {
+			$data['notas'] = sanitize_textarea_field($mapped[$notas_key]);
 		}
 
 		return array(
@@ -516,9 +526,10 @@ class CSV {
 	 * @param array<string> $alternatives Possible key names.
 	 * @return string|null Found key or null.
 	 */
-	private function find_header_key( array $mapped, array $alternatives ): ?string {
-		foreach ( $alternatives as $alt ) {
-			if ( isset( $mapped[ $alt ] ) ) {
+	private function find_header_key(array $mapped, array $alternatives): ?string
+	{
+		foreach ($alternatives as $alt) {
+			if (isset($mapped[$alt])) {
 				return $alt;
 			}
 		}
@@ -531,17 +542,18 @@ class CSV {
 	 * @param string $date Date in YYYY-MM-DD format.
 	 * @return string Formatted date or empty string.
 	 */
-	private function normalize_date_export( string $date ): string {
-		if ( empty( $date ) || $date === '0000-00-00' ) {
+	private function normalize_date_export(string $date): string
+	{
+		if (empty($date) || $date === '0000-00-00') {
 			return '';
 		}
 
-		$timestamp = strtotime( $date );
-		if ( false === $timestamp ) {
+		$timestamp = strtotime($date);
+		if (false === $timestamp) {
 			return '';
 		}
 
-		return date( 'd/m/Y', $timestamp );
+		return date('d/m/Y', $timestamp);
 	}
 
 	/**
@@ -550,29 +562,30 @@ class CSV {
 	 * @param string $date Date string.
 	 * @return string|null Normalized date in YYYY-MM-DD format or null.
 	 */
-	private function normalize_date_import( string $date ): ?string {
-		if ( empty( $date ) ) {
+	private function normalize_date_import(string $date): ?string
+	{
+		if (empty($date)) {
 			return null;
 		}
 
 		// Try YYYY-MM-DD format first.
-		if ( preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $date, $matches ) ) {
-			if ( checkdate( (int) $matches[2], (int) $matches[3], (int) $matches[1] ) ) {
+		if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $matches)) {
+			if (checkdate((int) $matches[2], (int) $matches[3], (int) $matches[1])) {
 				return $date;
 			}
 		}
 
 		// Try DD/MM/YYYY format.
-		if ( preg_match( '/^(\d{2})\/(\d{2})\/(\d{4})$/', $date, $matches ) ) {
-			if ( checkdate( (int) $matches[2], (int) $matches[1], (int) $matches[3] ) ) {
-				return sprintf( '%04d-%02d-%02d', (int) $matches[3], (int) $matches[2], (int) $matches[1] );
+		if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $date, $matches)) {
+			if (checkdate((int) $matches[2], (int) $matches[1], (int) $matches[3])) {
+				return sprintf('%04d-%02d-%02d', (int) $matches[3], (int) $matches[2], (int) $matches[1]);
 			}
 		}
 
 		// Try DD-MM-YYYY format.
-		if ( preg_match( '/^(\d{2})-(\d{2})-(\d{4})$/', $date, $matches ) ) {
-			if ( checkdate( (int) $matches[2], (int) $matches[1], (int) $matches[3] ) ) {
-				return sprintf( '%04d-%02d-%02d', (int) $matches[3], (int) $matches[2], (int) $matches[1] );
+		if (preg_match('/^(\d{2})-(\d{2})-(\d{4})$/', $date, $matches)) {
+			if (checkdate((int) $matches[2], (int) $matches[1], (int) $matches[3])) {
+				return sprintf('%04d-%02d-%02d', (int) $matches[3], (int) $matches[2], (int) $matches[1]);
 			}
 		}
 
@@ -585,8 +598,9 @@ class CSV {
 	 * @param float $number Number to format.
 	 * @return string Formatted number.
 	 */
-	private function normalize_number_export( float $number ): string {
-		return number_format( $number, 2, ',', ' ' );
+	private function normalize_number_export(float $number): string
+	{
+		return number_format($number, 2, ',', ' ');
 	}
 
 	/**
@@ -595,42 +609,43 @@ class CSV {
 	 * @param string $number Number string.
 	 * @return float|null Parsed number or null.
 	 */
-	private function normalize_number_import( string $number ): ?float {
-		if ( empty( $number ) ) {
+	private function normalize_number_import(string $number): ?float
+	{
+		if (empty($number)) {
 			return null;
 		}
 
 		// Remove spaces.
-		$number = trim( str_replace( ' ', '', $number ) );
+		$number = trim(str_replace(' ', '', $number));
 
 		// Empty after trimming.
-		if ( empty( $number ) ) {
+		if (empty($number)) {
 			return null;
 		}
 
 		// Try EN format (dot as decimal, comma as thousands) - check for dot and comma pattern.
-		if ( preg_match( '/^[\d,]+\.\d+$/', $number ) ) {
-			$number = str_replace( ',', '', $number );
+		if (preg_match('/^[\d,]+\.\d+$/', $number)) {
+			$number = str_replace(',', '', $number);
 			return (float) $number;
 		}
 
 		// Try PT-PT format (comma as decimal, space/dot as thousands) - check for comma pattern.
-		if ( preg_match( '/^[\d\s\.]+,\d+$/', $number ) ) {
-			$number = str_replace( array( ' ', '.' ), '', $number );
-			$number = str_replace( ',', '.', $number );
+		if (preg_match('/^[\d\s\.]+,\d+$/', $number)) {
+			$number = str_replace(array(' ', '.'), '', $number);
+			$number = str_replace(',', '.', $number);
 			return (float) $number;
 		}
 
 		// Try simple number with comma as decimal.
-		if ( strpos( $number, ',' ) !== false && strpos( $number, '.' ) === false ) {
-			$number = str_replace( ',', '.', $number );
-			if ( is_numeric( $number ) ) {
+		if (strpos($number, ',') !== false && strpos($number, '.') === false) {
+			$number = str_replace(',', '.', $number);
+			if (is_numeric($number)) {
 				return (float) $number;
 			}
 		}
 
 		// Try simple number.
-		if ( is_numeric( $number ) ) {
+		if (is_numeric($number)) {
 			return (float) $number;
 		}
 
@@ -643,8 +658,9 @@ class CSV {
 	 * @param string $type 'despesas' or 'receitas'.
 	 * @return string CSV content.
 	 */
-	public function get_template( string $type ): string {
-		if ( 'despesas' === $type ) {
+	public function get_template(string $type): string
+	{
+		if ('despesas' === $type) {
 			return $this->get_despesas_template();
 		} else {
 			return $this->get_receitas_template();
@@ -656,41 +672,42 @@ class CSV {
 	 *
 	 * @return string CSV content.
 	 */
-	private function get_despesas_template(): string {
+	private function get_despesas_template(): string
+	{
+		// Use exact headers from the provided template
 		$headers = array(
-			__( 'Data', 'gestor-financeiro' ),
-			__( 'Estabelecimento', 'gestor-financeiro' ),
-			__( 'Fornecedor', 'gestor-financeiro' ),
-			__( 'Funcionário', 'gestor-financeiro' ),
-			__( 'Tipo', 'gestor-financeiro' ),
-			__( 'Descrição', 'gestor-financeiro' ),
-			__( 'Valor', 'gestor-financeiro' ),
-			__( 'Vencimento', 'gestor-financeiro' ),
-			__( 'Pago', 'gestor-financeiro' ),
-			__( 'Notas', 'gestor-financeiro' ),
+			'Data',
+			'Estabelecimento',
+			'Fornecedor',
+			'Funcionário',
+			'Tipo',
+			'Descrição',
+			'Valor',
+			'Vencimento',
+			'Pago',
+			'Notas',
 		);
 
 		$lines = array();
-		$lines[] = implode( ',', array_map( array( $this, 'escape_csv_field' ), $headers ) );
-		
-		// Add example row
-		$example_row = array(
-			date( 'd/m/Y', strtotime( 'today' ) ),
-			__( 'Exemplo Restaurante', 'gestor-financeiro' ),
-			__( 'Exemplo Fornecedor', 'gestor-financeiro' ),
-			'',
-			__( 'Alimentação', 'gestor-financeiro' ),
-			__( 'Compras semanais', 'gestor-financeiro' ),
-			'450.00',
-			date( 'd/m/Y', strtotime( '+7 days' ) ),
-			__( 'Não', 'gestor-financeiro' ),
-			__( 'Notas de exemplo', 'gestor-financeiro' ),
-		);
-		$lines[] = implode( ',', array_map( array( $this, 'escape_csv_field' ), $example_row ) );
+		$lines[] = implode(',', array_map(array($this, 'escape_csv_field'), $headers));
 
-		// Convert to CSV with CRLF line endings for better compatibility (especially macOS Numbers)
-		// Use \r\n (CRLF) instead of just \n (LF) for maximum compatibility
-		$csv = implode( "\r\n", $lines );
+		// Add example row matching exactly the provided template
+		$example_row = array(
+			'04/11/2025',
+			'Exemplo Restaurante',
+			'Exemplo Fornecedor',
+			'',
+			'Alimentação',
+			'Compras semanais',
+			'450.00',
+			'11/11/2025',
+			'',
+			'Observações opcionais',
+		);
+		$lines[] = implode(',', array_map(array($this, 'escape_csv_field'), $example_row));
+
+		// Convert to CSV with UTF-8 BOM and CRLF line endings for Excel compatibility
+		$csv = "\xEF\xBB\xBF" . implode("\r\n", $lines);
 
 		return $csv;
 	}
@@ -700,33 +717,34 @@ class CSV {
 	 *
 	 * @return string CSV content.
 	 */
-	private function get_receitas_template(): string {
+	private function get_receitas_template(): string
+	{
 		$headers = array(
-			__( 'Data', 'gestor-financeiro' ),
-			__( 'Estabelecimento', 'gestor-financeiro' ),
-			__( 'Bruto', 'gestor-financeiro' ),
-			__( 'Taxas', 'gestor-financeiro' ),
-			__( 'Líquido', 'gestor-financeiro' ),
-			__( 'Notas', 'gestor-financeiro' ),
+			__('Data', 'gestor-financeiro'),
+			__('Estabelecimento', 'gestor-financeiro'),
+			__('Bruto', 'gestor-financeiro'),
+			__('Taxas', 'gestor-financeiro'),
+			__('Líquido', 'gestor-financeiro'),
+			__('Notas', 'gestor-financeiro'),
 		);
 
 		$lines = array();
-		$lines[] = implode( ',', array_map( array( $this, 'escape_csv_field' ), $headers ) );
-		
+		$lines[] = implode(',', array_map(array($this, 'escape_csv_field'), $headers));
+
 		// Add example row
 		$example_row = array(
-			date( 'd/m/Y', strtotime( 'today' ) ),
-			__( 'Exemplo Restaurante', 'gestor-financeiro' ),
+			date('d/m/Y', strtotime('today')),
+			__('Exemplo Restaurante', 'gestor-financeiro'),
 			'2500.00',
 			'125.00',
 			'2375.00',
-			__( 'Vendas do dia', 'gestor-financeiro' ),
+			__('Vendas do dia', 'gestor-financeiro'),
 		);
-		$lines[] = implode( ',', array_map( array( $this, 'escape_csv_field' ), $example_row ) );
+		$lines[] = implode(',', array_map(array($this, 'escape_csv_field'), $example_row));
 
 		// Convert to CSV with CRLF line endings for better compatibility (especially macOS Numbers)
 		// Use \r\n (CRLF) instead of just \n (LF) for maximum compatibility
-		$csv = implode( "\r\n", $lines );
+		$csv = implode("\r\n", $lines);
 
 		return $csv;
 	}
@@ -737,12 +755,12 @@ class CSV {
 	 * @param string $field Field value.
 	 * @return string Escaped field.
 	 */
-	private function escape_csv_field( string $field ): string {
+	private function escape_csv_field(string $field): string
+	{
 		// If field contains comma, newline, or double quote, wrap in quotes and escape quotes.
-		if ( strpos( $field, ',' ) !== false || strpos( $field, "\n" ) !== false || strpos( $field, '"' ) !== false ) {
-			$field = '"' . str_replace( '"', '""', $field ) . '"';
+		if (strpos($field, ',') !== false || strpos($field, "\n") !== false || strpos($field, '"') !== false) {
+			$field = '"' . str_replace('"', '""', $field) . '"';
 		}
 		return $field;
 	}
 }
-

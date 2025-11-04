@@ -63,11 +63,11 @@ class RestController
         $this->register_calendar_routes();
         $this->register_salaries_routes();
         $this->register_reports_routes();
-		$this->register_csv_routes();
-		$this->register_apartment_routes();
-		$this->register_help_routes();
-		$this->register_admin_routes();
-	}
+        $this->register_csv_routes();
+        $this->register_apartment_routes();
+        $this->register_help_routes();
+        $this->register_admin_routes();
+    }
 
     /**
      * Register estabelecimentos routes.
@@ -1360,13 +1360,43 @@ class RestController
 
         $receitas_repo = new ReceitasRepository();
         $despesas_repo = new DespesasRepository();
+        $estabelecimentos_repo = new EstabelecimentosRepository();
 
-        $receita_total = $receitas_repo->getMonthlyTotal($month, $year, $estabelecimento_id);
-        $despesa_total = $despesas_repo->getMonthlyTotal($month, $year, $estabelecimento_id);
+        // Get all establishments
+        $estabelecimentos = $estabelecimentos_repo->findAll();
+        $por_estabelecimento = array();
+
+        // Calculate totals for each establishment
+        foreach ($estabelecimentos as $estabelecimento) {
+            $est_id = (int) $estabelecimento['id'];
+
+            $receita = $receitas_repo->getMonthlyTotal($month, $year, $est_id);
+            $despesa = $despesas_repo->getMonthlyTotal($month, $year, $est_id);
+            $resultado = $receita - $despesa;
+
+            $por_pagar = 0;
+            $pending_expenses = $despesas_repo->findPending(null, $est_id);
+            foreach ($pending_expenses as $expense) {
+                $por_pagar += (float) $expense['valor'];
+            }
+
+            $por_estabelecimento[] = array(
+                'id' => $est_id,
+                'nome' => $estabelecimento['nome'],
+                'receita_mes' => $receita,
+                'despesas_mes' => $despesa,
+                'resultado' => $resultado,
+                'por_pagar' => $por_pagar,
+            );
+        }
+
+        // Calculate totals (all establishments)
+        $receita_total = $receitas_repo->getMonthlyTotal($month, $year, null);
+        $despesa_total = $despesas_repo->getMonthlyTotal($month, $year, null);
         $resultado = $receita_total - $despesa_total;
-        $por_pagar = 0; // Will be calculated from pending expenses.
+        $por_pagar = 0;
 
-        $pending_expenses = $despesas_repo->findPending(null, $estabelecimento_id);
+        $pending_expenses = $despesas_repo->findPending(null, null);
         foreach ($pending_expenses as $expense) {
             $por_pagar += (float) $expense['valor'];
         }
@@ -1377,6 +1407,7 @@ class RestController
                 'despesas_mes' => $despesa_total,
                 'resultado' => $resultado,
                 'por_pagar' => $por_pagar,
+                'por_estabelecimento' => $por_estabelecimento,
                 'month' => $month,
                 'year' => $year,
             ),
@@ -1690,6 +1721,48 @@ class RestController
             );
         }
 
+        // Check if static template file exists
+        $template_file = GF_PLUGIN_DIR . 'assets/templates/modelo-' . $type . '.csv';
+
+        if (file_exists($template_file)) {
+            // Read static file in binary mode to preserve encoding
+            $handle = fopen($template_file, 'rb');
+            if ($handle === false) {
+                return $this->error_response(
+                    'file_read_error',
+                    __('Erro ao ler ficheiro do modelo.', 'gestor-financeiro'),
+                    500
+                );
+            }
+
+            $csv_content = '';
+            while (!feof($handle)) {
+                $csv_content .= fread($handle, 8192);
+            }
+            fclose($handle);
+
+            // Ensure UTF-8 BOM is present for Excel compatibility
+            if (substr($csv_content, 0, 3) !== "\xEF\xBB\xBF") {
+                $csv_content = "\xEF\xBB\xBF" . $csv_content;
+            }
+
+            // Get file size after BOM addition
+            $file_size = strlen($csv_content);
+
+            // Return CSV as download via REST response with correct headers
+            // Use mb_strlen to properly handle UTF-8
+            $response = new \WP_REST_Response($csv_content, 200);
+            $response->header('Content-Type', 'text/csv; charset=utf-8');
+            $filename = sprintf('modelo-%s.csv', $type);
+            $response->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+            $response->header('Content-Length', (string) $file_size);
+            $response->header('Cache-Control', 'no-cache, must-revalidate');
+            $response->header('Pragma', 'no-cache');
+
+            return $response;
+        }
+
+        // Fallback to dynamic generation if static file doesn't exist
         $csv_handler = new CSV();
         $csv_content = $csv_handler->get_template($type);
 
@@ -1810,7 +1883,7 @@ class RestController
         try {
             // Get all table names
             $tables = new \GestorFinanceiro\DB\Tables();
-            
+
             // Tables to clear (in order to respect foreign keys)
             // Note: settings table is NOT cleared, only other data tables
             $table_names = array(
@@ -1863,7 +1936,7 @@ class RestController
     public function get_help_guide(\WP_REST_Request $request): \WP_REST_Response
     {
         $guide_file = GF_PLUGIN_DIR . 'docs/GUIA-DE-UTILIZADOR.md';
-        
+
         if (!file_exists($guide_file)) {
             return $this->error_response(
                 'guide_not_found',
@@ -1873,7 +1946,7 @@ class RestController
         }
 
         $content = file_get_contents($guide_file);
-        
+
         if ($content === false) {
             return $this->error_response(
                 'guide_read_error',
@@ -1913,7 +1986,7 @@ class RestController
             $html = preg_replace('/## Índice\s*\n\n.*?(?=\n---|\n## |$)/s', '', $html, 1);
             // Also remove the separator line if present
             $html = preg_replace('/^---\s*$/m', '', $html, 1);
-            
+
             // Parse TOC links - handle both numbered and unnumbered lists
             preg_match_all('/^\d+\.\s+\[(.*?)\]\(#([^\)]+)\)/m', $toc_content, $toc_matches, PREG_SET_ORDER);
             foreach ($toc_matches as $match) {
@@ -1928,19 +2001,19 @@ class RestController
         }
 
         // Headers with IDs - also wrap sections for show/hide functionality
-        $html = preg_replace_callback('/^### (.*)$/m', function($matches) {
+        $html = preg_replace_callback('/^### (.*)$/m', function ($matches) {
             $text = trim($matches[1]);
             $id = sanitize_title($text);
             return '<h3 id="' . $id . '">' . $text . '</h3>';
         }, $html);
-        
-        $html = preg_replace_callback('/^## (.*)$/m', function($matches) {
+
+        $html = preg_replace_callback('/^## (.*)$/m', function ($matches) {
             $text = trim($matches[1]);
             $id = sanitize_title($text);
             return '<h2 id="' . $id . '">' . $text . '</h2>';
         }, $html);
-        
-        $html = preg_replace_callback('/^# (.*)$/m', function($matches) {
+
+        $html = preg_replace_callback('/^# (.*)$/m', function ($matches) {
             $text = trim($matches[1]);
             $id = sanitize_title($text);
             return '<h1 id="' . $id . '">' . $text . '</h1>';
@@ -1961,7 +2034,7 @@ class RestController
         // Lists
         $html = preg_replace('/^\* (.*)$/m', '<li>$1</li>', $html);
         $html = preg_replace('/^- (.*)$/m', '<li>$1</li>', $html);
-        
+
         // Wrap consecutive list items in ul
         $html = preg_replace('/(<li>.*<\/li>\n?)+/s', '<ul>$0</ul>', $html);
 
@@ -1973,7 +2046,7 @@ class RestController
 
         foreach ($lines as $line) {
             $trimmed = trim($line);
-            
+
             if (empty($trimmed)) {
                 if ($in_paragraph && !empty($paragraph)) {
                     $result[] = '<p>' . trim($paragraph) . '</p>';
@@ -1985,8 +2058,10 @@ class RestController
             }
 
             // Check if line is a header, list, or code block
-            if (preg_match('/^<(h[1-6]|ul|li|code|strong|a)/', $trimmed) || 
-                preg_match('/^#+ |^\* |^- |^`/', $trimmed)) {
+            if (
+                preg_match('/^<(h[1-6]|ul|li|code|strong|a)/', $trimmed) ||
+                preg_match('/^#+ |^\* |^- |^`/', $trimmed)
+            ) {
                 if ($in_paragraph && !empty($paragraph)) {
                     $result[] = '<p>' . trim($paragraph) . '</p>';
                     $paragraph = '';
@@ -2024,7 +2099,7 @@ class RestController
             // Check if this line is an H2 header that's in the TOC
             if (preg_match('/<h2 id="([^"]+)">(.*?)<\/h2>/', $line, $h2_match)) {
                 $h2_id = $h2_match[1];
-                
+
                 // Check if this H2 is in TOC
                 // The anchor in TOC is already sanitized, and h2_id is also sanitized
                 $is_in_toc = false;
@@ -2045,12 +2120,12 @@ class RestController
                         $wrapped_lines[] = '</div>';
                         $content_before_first_h2 = array();
                     }
-                    
+
                     // Close previous section if exists
                     if ($current_section !== null) {
                         $wrapped_lines[] = '</div>';
                     }
-                    
+
                     // Start new section
                     $display = $first_section_found ? 'none' : 'block';
                     $wrapped_lines[] = '<div class="gf-help-section" id="section-' . $h2_id . '" style="display: ' . $display . ';">';
@@ -2058,7 +2133,7 @@ class RestController
                     $first_section_found = true;
                 }
             }
-            
+
             // Add line to appropriate array
             if ($first_section_found) {
                 $wrapped_lines[] = $line;

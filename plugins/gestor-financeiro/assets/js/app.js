@@ -77,8 +77,8 @@
 				document.body.style.backgroundColor = '#131313';
 				document.documentElement.style.backgroundColor = '#131313';
 			} else {
-				document.body.style.backgroundColor = '#ffffff';
-				document.documentElement.style.backgroundColor = '#ffffff';
+				document.body.style.backgroundColor = '#f9f9f9';
+				document.documentElement.style.backgroundColor = '#f9f9f9';
 			}
 		};
 
@@ -183,6 +183,43 @@
 					updateElement('[data-summary="despesas_mes"]', formatCurrency(data.despesas_mes));
 					updateElement('[data-summary="resultado"]', formatCurrency(data.resultado));
 					updateElement('[data-summary="por_pagar"]', formatCurrency(data.por_pagar));
+				}
+
+				// Render data grouped by establishment
+				const porEstabelecimentoContainer = document.getElementById('gf-summary-por-estabelecimento');
+				if (porEstabelecimentoContainer && data.por_estabelecimento) {
+					if (data.por_estabelecimento.length === 0) {
+						porEstabelecimentoContainer.innerHTML = '<p>Nenhum estabelecimento encontrado.</p>';
+						return;
+					}
+
+					let html = '';
+					data.por_estabelecimento.forEach(est => {
+						html += `
+							<div class="gf-summary-establishment-section" style="margin-bottom: 30px;">
+								<h4 style="margin-bottom: 15px; color: #00a32a;">${est.nome}</h4>
+								<div class="gf-summary-cards">
+									<div class="gf-card">
+										<h3>Receita do mês</h3>
+										<div class="gf-value">${formatCurrency(est.receita_mes)}</div>
+									</div>
+									<div class="gf-card">
+										<h3>Despesas do mês</h3>
+										<div class="gf-value">${formatCurrency(est.despesas_mes)}</div>
+									</div>
+									<div class="gf-card">
+										<h3>Resultado</h3>
+										<div class="gf-value" style="color: ${est.resultado >= 0 ? '#00a32a' : '#d63638'};">${formatCurrency(est.resultado)}</div>
+									</div>
+									<div class="gf-card">
+										<h3>Por pagar</h3>
+										<div class="gf-value">${formatCurrency(est.por_pagar)}</div>
+									</div>
+								</div>
+							</div>
+						`;
+					});
+					porEstabelecimentoContainer.innerHTML = html;
 				}
 			})
 			.catch(error => {
@@ -461,8 +498,16 @@
 				}
 				return r.json();
 			}),
+			fetch(`${apiUrl}estabelecimentos`, {
+				headers: { 'X-WP-Nonce': nonce },
+			}).then(r => {
+				if (!r.ok) {
+					throw new Error(`HTTP error! status: ${r.status}`);
+				}
+				return r.json();
+			}),
 		])
-			.then(([despesas, receitas]) => {
+			.then(([despesas, receitas, estabelecimentos]) => {
 				list.innerHTML = '';
 
 				// Check if responses are arrays or error objects
@@ -474,6 +519,16 @@
 					console.error('Receitas response is not an array:', receitas);
 					receitas = [];
 				}
+				if (!Array.isArray(estabelecimentos)) {
+					console.error('Estabelecimentos response is not an array:', estabelecimentos);
+					estabelecimentos = [];
+				}
+
+				// Create map of establishment IDs to names
+				const estabMap = {};
+				estabelecimentos.forEach(e => {
+					estabMap[e.id] = e.nome;
+				});
 
 				if (despesas.length === 0 && receitas.length === 0) {
 					list.innerHTML = '<p>Nenhum movimento encontrado.</p>';
@@ -487,11 +542,16 @@
 				].sort((a, b) => new Date(b.data) - new Date(a.data));
 
 				allMovements.forEach(movement => {
+					const estabelecimentoNome = movement.estabelecimento_id && estabMap[movement.estabelecimento_id]
+						? estabMap[movement.estabelecimento_id]
+						: movement.estabelecimento_id ? `ID: ${movement.estabelecimento_id}` : '';
+					
 					const item = document.createElement('div');
 					item.className = 'gf-movimento-item';
 					item.innerHTML = `
 						<div>
 							<strong>${formatDate(movement.data)}</strong> - ${movement.descricao || movement.canal || ''}
+							${estabelecimentoNome ? `<span style="color: #00a32a; margin-left: 10px;">[${estabelecimentoNome}]</span>` : ''}
 							<span style="color: ${movement.type === 'despesa' ? '#d63638' : '#00a32a'}; margin-left: 10px;">
 								${movement.type === 'despesa' ? '-' : '+'} ${formatCurrency(movement.valor || movement.liquido || 0)}
 							</span>
@@ -1038,23 +1098,14 @@
 				if (!response.ok) {
 					throw new Error('Erro ao descarregar modelo');
 				}
-				return response.text();
+				// Get response as arrayBuffer to preserve binary data including BOM
+				return response.arrayBuffer();
 			})
-			.then(csvContent => {
-				// Remove BOM if present (UTF-8 BOM is \xEF\xBB\xBF)
-				let content = csvContent;
-				// Check for UTF-8 BOM at the beginning
-				if (content.length > 0 && content.charCodeAt(0) === 0xFEFF) {
-					content = content.substring(1);
-				}
-				// Also check for BOM bytes directly
-				if (content.length >= 3 && content.charCodeAt(0) === 0xEF && content.charCodeAt(1) === 0xBB && content.charCodeAt(2) === 0xBF) {
-					content = content.substring(3);
-				}
-				
-				// Create blob with proper CSV MIME type
-				// Use 'text/csv' without charset for better compatibility with Numbers/Excel
-				const blob = new Blob([content], { type: 'text/csv' });
+			.then(arrayBuffer => {
+				// Create blob with explicit UTF-8 encoding to preserve BOM
+				const blob = new Blob([arrayBuffer], { 
+					type: 'text/csv;charset=utf-8;' 
+				});
 				const url = window.URL.createObjectURL(blob);
 				const a = document.createElement('a');
 				a.href = url;

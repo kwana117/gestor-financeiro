@@ -21,7 +21,7 @@ section .gf-app {
 /* CSS Variables for Dark Mode */
 html.gf-dark-mode-inline,
 .gf-app {
-  --gf-bg-primary: #ffffff;
+  --gf-bg-primary: #f9f9f9;
   --gf-bg-secondary: #f9f9f9;
   --gf-bg-tertiary: #f0f0f1;
   --gf-text-primary: #1e1e1e;
@@ -319,6 +319,23 @@ html[data-gf-app] {
   font-size: 28px;
   font-weight: 700;
   color: var(--gf-text-primary);
+}
+
+/* Summary by Establishment */
+.gf-summary-por-estabelecimento {
+  margin-top: 20px;
+}
+
+.gf-summary-establishment-section {
+  margin-bottom: 40px;
+}
+
+.gf-summary-establishment-section h4 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--gf-border-color);
 }
 
 /* Buttons */
